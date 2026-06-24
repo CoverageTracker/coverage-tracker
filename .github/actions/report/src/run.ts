@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'fs';
 
-interface Metric {
+export interface Metric {
   name: string;
   value: number;
   unit: string;
@@ -27,7 +27,7 @@ export interface ThresholdResult {
   reason: string;
 }
 
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   const workerUrl = (process.env.WORKER_URL ?? '').replace(/\/$/, '');
   const metricsFile = process.env.METRICS_FILE ?? '';
 
@@ -89,7 +89,7 @@ async function run(): Promise<void> {
 
 // ── Push path: ingest metrics ─────────────────────────────────────────────
 
-async function runIngest(workerUrl: string, oidcToken: string, metrics: Metric[]): Promise<void> {
+export async function runIngest(workerUrl: string, oidcToken: string, metrics: Metric[]): Promise<void> {
   // Body carries only metric values; repo/branch/commit come from the OIDC token (A3)
   const res = await fetch(`${workerUrl}/ingest`, {
     method: 'POST',
@@ -112,7 +112,7 @@ async function runIngest(workerUrl: string, oidcToken: string, metrics: Metric[]
 
 // ── PR path: fetch baselines, check thresholds, post Check Run ─────────────
 
-async function runPRCheck(
+export async function runPRCheck(
   workerUrl: string,
   oidcToken: string,
   metrics: Metric[],
@@ -195,7 +195,7 @@ async function runPRCheck(
   }
 }
 
-async function postCheckRun(
+export async function postCheckRun(
   githubToken: string,
   owner: string,
   repo: string,
