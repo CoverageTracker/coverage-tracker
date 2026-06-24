@@ -43,6 +43,14 @@ npm install
 
 ## 3. Create the D1 database
 
+First, copy the example config to create your local `wrangler.jsonc` (it is gitignored and holds your personal values):
+
+```bash
+cp wrangler.example.jsonc wrangler.jsonc
+```
+
+Then create the database:
+
 ```bash
 npx wrangler d1 create coverage-tracker
 ```
