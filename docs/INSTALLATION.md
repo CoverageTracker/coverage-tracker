@@ -290,7 +290,7 @@ Run the provided setup script to add a WAF skip rule for those paths:
 
 ```bash
 CLOUDFLARE_API_TOKEN=<your-token> ZONE_DOMAIN=yourdomain.com \
-  bash scripts/setup-waf-rules.sh
+  node scripts/setup-waf-rules.mjs
 ```
 
 The script is idempotent — safe to re-run. It requires a token with **Zone → WAF → Edit** permission.
