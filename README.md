@@ -118,6 +118,16 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
 │       ├── badge.ts      # GET /badge/*
 │       ├── webhooks.ts   # POST /webhooks/github
 │       └── admin.ts      # POST /admin/*
+├── dashboard/            # SvelteKit 5 dashboard on Cloudflare Pages
+│   └── src/routes/       # Overview + per-repo drill-in views
+├── .github/
+│   ├── actions/report/   # Composite reporting Action (collect + ingest + Check Runs)
+│   └── workflows/        # CI: action-test.yml, deploy-dashboard.yml
+├── scripts/
+│   └── setup-waf-rules.mjs  # WAF skip rule for /ingest + /webhooks/github (Node 18+)
+├── test/
+│   ├── collect-parsers.sh   # Parser fixture tests for collect.sh
+│   └── seed-local.sql       # Local D1 seed data for dashboard dev
 ├── docs/
 │   ├── INSTALLATION.md   # Setup guide
 │   ├── PROGRESS.md       # Phase implementation status
@@ -192,7 +202,7 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 | 2 | Worker core (ingest, metrics, badge) | Complete |
 | 3 | GitHub App webhooks | Complete |
 | 4 | Thresholds + PR diff checks | Complete |
-| 5 | Svelte dashboard (Cloudflare Pages) | Planned |
+| 5 | Svelte dashboard (Cloudflare Pages) | Complete |
 | 6 | Composite reporting Action | Complete |
 | 7 | "Deploy to Cloudflare" button | Planned |
 | 8 | Docs, OSS hygiene, public release | In progress |

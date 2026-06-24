@@ -53,6 +53,7 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 - [x] All `wrangler secret`s configured: `GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_AUD`, `CF_ACCESS_TEAM_DOMAIN`
 - [x] GitHub App created, installed on ZeroStash org (7 repos registered)
 - [x] Cloudflare Access application protecting `/api` and `/admin` paths only
+- [x] `scripts/setup-waf-rules.mjs` — Node.js script (no external deps) to add WAF skip rule bypassing Browser Integrity Check for `/ingest` and `/webhooks/github`; idempotent, documented in INSTALLATION.md step 11
 
 ---
 
@@ -67,7 +68,7 @@ Implemented as part of the Phase 6 Action (the two are tightly coupled). E2E ver
 
 ---
 
-## Phase 5 — Svelte dashboard 🔶 Implemented — pending Pages deployment
+## Phase 5 — Svelte dashboard ✅ Complete
 
 Dashboard built in `dashboard/` (SvelteKit 5 + `@sveltejs/adapter-cloudflare`). All API calls server-side; local dev uses `DEV_BYPASS_SECRET` bypass. Service Token refactor documented in `docs/plans/service-auth-token.md`.
 
@@ -78,11 +79,12 @@ Dashboard built in `dashboard/` (SvelteKit 5 + `@sveltejs/adapter-cloudflare`). 
 - [x] Local dev bypass (`DEV_BYPASS_SECRET`) — dead code in production; documented in `.dev.vars.example`
 - [x] `dashboard/wrangler.toml` anchors adapter to dashboard dir (prevents root Worker config bleed)
 - [x] `test/seed-local.sql` + `db:seed:local` npm script for local D1 test data
-- [x] `.github/workflows/deploy-dashboard.yml` — Direct Upload via `wrangler pages deploy`; previews on PRs, production on push to main
-- [ ] Cloudflare Pages project created (`wrangler pages project create coverage-tracker-dashboard --production-branch main`)
-- [ ] `WORKER_URL` set as Pages secret (`wrangler pages secret put WORKER_URL`)
-- [ ] `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` added as GitHub Actions repo secrets
-- [ ] Cloudflare Access application protecting the Pages hostname
+- [x] `.github/workflows/deploy-dashboard.yml` — Direct Upload via `wrangler pages deploy`; previews on PRs, production on push to main; skips Dependabot PRs
+- [x] GitHub Actions pinned to Node.js 24 compatible versions: `actions/checkout@v7` (SHA-pinned), `actions/setup-node@v6` (SHA-pinned)
+- [x] Cloudflare Pages project created (`coverage-tracker-dashboard`, production branch: `main`)
+- [x] `WORKER_URL` set as Pages secret
+- [x] `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` added as GitHub Actions repo secrets
+- [x] Cloudflare Access application protecting the Pages hostname
 
 ---
 
