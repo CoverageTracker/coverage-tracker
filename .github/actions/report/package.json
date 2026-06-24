@@ -1,0 +1,24 @@
+{
+  "name": "coverage-tracker-report-action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node runner for the coverage-tracker report action",
+  "main": "dist/run.js",
+  "scripts": {
+    "build": "esbuild src/run.ts --bundle --platform=node --target=node20 --outfile=dist/run.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1",
+    "@actions/http-client": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}

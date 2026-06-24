@@ -1,0 +1,35 @@
+name: Action self-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  id-token: write
+  checks: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Run the Action runner's own unit tests.
+      # vitest --coverage emits coverage/coverage-summary.json (Istanbul json-summary format),
+      # which is exactly what collect.sh reads for the JS coverage path.
+      # The Action dogfoods itself: real test coverage replaces a hardcoded artifact.
+      - name: Test Action runner
+        working-directory: .github/actions/report
+        run: npm ci && npm test
+
+      # Run the collect.sh parser fixture tests.
+      - name: Test collect.sh parsers
+        run: bash test/collect-parsers.sh
+
+      - uses: ./.github/actions/report
+        with:
+          worker-url: https://coverage-tracker.zerostash.org
+          min-coverage: '20'
+          max-coverage-drop: '5'
+          coverage-report-js: .github/actions/report/coverage/coverage-summary.json

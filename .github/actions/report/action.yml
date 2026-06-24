@@ -1,0 +1,96 @@
+name: 'Coverage Tracker Report'
+description: >
+  Collect code-quality metrics (coverage, complexity, duplication) and report
+  them to a self-hosted coverage-tracker Worker. On push to the default branch
+  the metrics are persisted; on pull_request a Check Run is posted and the job
+  fails if any configured threshold is breached.
+
+  Required consuming-workflow permissions:
+    permissions:
+      id-token: write   # mint OIDC token for Worker auth
+      checks: write     # post Check Run on PRs
+
+author: 'ZeroStash'
+
+inputs:
+  worker-url:
+    description: >
+      Base URL of your coverage-tracker Cloudflare Worker,
+      e.g. https://coverage.example.com
+    required: true
+
+  # ── Coverage artifact paths (consumer runs tests first) ──────────────────
+  coverage-report-go:
+    description: >
+      Path to the Go coverage profile written by
+      go test -coverprofile=<path> ./...
+    required: false
+    default: 'coverage.out'
+
+  coverage-report-python:
+    description: >
+      Path to the coverage.py JSON report written by
+      coverage json -o <path>
+    required: false
+    default: 'coverage.json'
+
+  coverage-report-js:
+    description: >
+      Path to the Istanbul/Vitest coverage-summary.json written by
+      vitest run --coverage or jest --coverage
+    required: false
+    default: 'coverage/coverage-summary.json'
+
+  # ── Thresholds (all optional; omit to skip that check) ───────────────────
+  min-coverage:
+    description: >
+      Minimum coverage percentage (absolute floor).
+      Job fails if current coverage is below this value.
+    required: false
+    default: ''
+
+  max-coverage-drop:
+    description: >
+      Maximum allowed coverage drop from the default-branch baseline,
+      in percentage points. PR checks only — requires a prior push to
+      have ingested a baseline.
+    required: false
+    default: ''
+
+  max-complexity:
+    description: >
+      Maximum allowed average cyclomatic complexity score.
+      Job fails if the collected complexity exceeds this value.
+    required: false
+    default: ''
+
+  max-duplication:
+    description: >
+      Maximum allowed code duplication percentage.
+      Job fails if jscpd reports a higher percentage.
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Collect metrics
+      id: collect
+      shell: bash
+      env:
+        COVERAGE_REPORT_GO: ${{ inputs.coverage-report-go }}
+        COVERAGE_REPORT_PYTHON: ${{ inputs.coverage-report-python }}
+        COVERAGE_REPORT_JS: ${{ inputs.coverage-report-js }}
+      run: bash "${{ github.action_path }}/collect.sh"
+
+    - name: Report metrics
+      shell: bash
+      env:
+        WORKER_URL: ${{ inputs.worker-url }}
+        MIN_COVERAGE: ${{ inputs.min-coverage }}
+        MAX_COVERAGE_DROP: ${{ inputs.max-coverage-drop }}
+        MAX_COMPLEXITY: ${{ inputs.max-complexity }}
+        MAX_DUPLICATION: ${{ inputs.max-duplication }}
+        METRICS_FILE: ${{ steps.collect.outputs.metrics-file }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: node ${{ github.action_path }}/dist/run.js

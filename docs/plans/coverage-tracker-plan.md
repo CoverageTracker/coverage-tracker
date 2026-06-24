@@ -250,7 +250,22 @@ Not in the current core build, but the schema and routes above must already supp
   (uPlot or Chart.js).
 - **Composite reporting Action**: in this repo at `.github/actions/report/`. Wraps the
   collection script + OIDC POST. Inputs: `worker-url`, threshold knobs. Version-locked to
-  the Worker by tagging the whole repo together.
+  the Worker by tagging the whole repo together. **Testing strategy (three layers, decided):**
+  - *Layer 1 (prerequisite):* vitest unit tests for the pure helpers in `src/run.ts`
+    (`parseThreshold`, `buildSummary`, etc.). vitest's `json-summary` coverage reporter
+    emits `coverage/coverage-summary.json` in the Istanbul shape `collect.sh` already
+    parses — the Action dogfoods itself, and the self-test workflow reads real coverage
+    instead of a hardcoded fake.
+  - *Layer 2:* a committed bash fixture script (`test/collect-parsers.sh`) that pipes sample
+    tool output through each inline Python parser in `collect.sh` and asserts the result.
+    This is the only way to cover the Go/Python/lizard parser branches, since those tools
+    are absent from this repo's CI environment.
+  - *Layer 3 (follow-on):* `@cloudflare/vitest-pool-workers` Worker route tests — OIDC
+    middleware rejection cases, ingest idempotency, baseline gating. Real setup cost;
+    does not block the self-test.
+  - Self-test workflow: `.github/workflows/action-test.yml` in this repo, using the local
+    action path `uses: ./.github/actions/report` and `coverage-report-js` pointing at the
+    vitest output. See `docs/PROGRESS.md` Phase 6 for the full checklist and workflow.
 - **Deploy to Cloudflare button**: relies on `wrangler` config declaring the D1 binding so
   Cloudflare auto-provisions it on fork+deploy, including running D1 migrations via the
   `package.json` deploy script (reference the **binding name**, not the DB name, so it works
