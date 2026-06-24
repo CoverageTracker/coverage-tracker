@@ -44,14 +44,14 @@ are documented so current designs accommodate them.
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 1 | D1 schema (multi-project from day one) | **NOW** |
-| 2 | Worker core: ingest (OIDC-verified), metrics read, badge | **NOW** |
-| 3 | GitHub App registration webhooks → projects table | **NOW** |
-| 4 | Thresholds + PR diff checks (reporting Action logic) | designed-for, built later |
-| 5 | Svelte dashboard on Cloudflare Pages, behind Access | later |
-| 6 | Reusable composite reporting Action (in this repo) | later |
-| 7 | "Deploy to Cloudflare" button + one-click onboarding | later |
-| 8 | Docs, OSS hygiene, public release | later |
+| 1 | D1 schema (multi-project from day one) | ✅ complete |
+| 2 | Worker core: ingest (OIDC-verified), metrics read, badge | ✅ complete |
+| 3 | GitHub App registration webhooks → projects table | ✅ complete |
+| 4 | Thresholds + PR diff checks (reporting Action logic) | ✅ complete |
+| 5 | Svelte dashboard on Cloudflare Pages, behind Access | not started |
+| 6 | Reusable composite reporting Action (in this repo) | ✅ complete |
+| 7 | "Deploy to Cloudflare" button + one-click onboarding | not started |
+| 8 | Docs, OSS hygiene, public release | 🔶 in progress |
 
 ---
 

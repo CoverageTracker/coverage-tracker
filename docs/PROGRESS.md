@@ -56,9 +56,9 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 
 ---
 
-## Phase 4 — Thresholds + PR diff checks 🔶 Implemented — untested
+## Phase 4 — Thresholds + PR diff checks ✅ Complete
 
-Implemented as part of the Phase 6 Action (the two are tightly coupled). **No end-to-end CI test has been run yet.**
+Implemented as part of the Phase 6 Action (the two are tightly coupled). E2E verified via PR #2 self-test: `min-coverage: '20'` passed, `min-coverage: '99'` breached with correct Check Run failure, baselines fetched from prior main push.
 
 - [x] Threshold logic in the reporting Action (`min-coverage`, `max-coverage-drop`, `max-complexity`, `max-duplication` inputs)
 - [x] PR diff checks: collect metrics, fetch baseline via OIDC-gated `GET /baseline`, compare
@@ -77,9 +77,9 @@ Implemented as part of the Phase 6 Action (the two are tightly coupled). **No en
 
 ---
 
-## Phase 6 — Composite reporting Action 🔶 Implemented — untested
+## Phase 6 — Composite reporting Action ✅ Complete
 
-Lives at `.github/actions/report/`. All files written and TypeScript compiled clean; `dist/run.js` committed. **No end-to-end CI test has been run yet — this is the next objective and is pivotal before any consuming repo can adopt the Action.**
+Lives at `.github/actions/report/`. All files written and TypeScript compiled clean; `dist/run.js` committed. E2E self-test verified: push-to-main ingests, feature-branch push skips cleanly, PR Check Runs post correctly with threshold enforcement.
 
 - [x] Action scaffold (`action.yml`, inputs: `worker-url`, threshold knobs; invokes `collect.sh` via `bash` to avoid exec-permission issues)
 - [x] OIDC token minting: `core.getIDToken('coverage-tracker')`; non-default-branch pushes skip before mint to avoid 422
@@ -106,7 +106,7 @@ The Action runner (`src/run.ts`) contains pure helper functions that unit-test t
 - [x] Add `vitest` and `@vitest/coverage-v8` to devDependencies in `.github/actions/report/package.json`
 - [x] Add `vitest.config.ts` to `.github/actions/report/`
 - [x] Update `test` script in `package.json`: `"test": "vitest run --coverage"`
-- [x] Write `src/__tests__/run.test.ts` — 31 tests covering all 5 helpers; all green
+- [x] Write `src/__tests__/run.test.ts` — 52 tests covering all helpers + I/O paths; all green
 - [x] Rebuild `dist/run.js` after adding exports (`npm run build`); verified `run()` fires in bundle (`node dist/run.js` → "WORKER_URL is not set")
 
 #### Layer 2 — `collect.sh` parser fixtures
@@ -129,16 +129,16 @@ High value but a real setup cost — requires `@cloudflare/vitest-pool-workers`,
 
 #### Step 1 — Create `.github/workflows/action-test.yml` ✅ Done
 
-Self-test workflow created. Uses `min-coverage: '20'` (runner's actual coverage is ~22% — only pure helpers are tested). Layer 2 fixture step added alongside the runner tests.
+Self-test workflow created. Uses `min-coverage: '20'`; actual coverage is 98.09% (52 tests covering all helpers + I/O paths). Layer 2 fixture step added alongside the runner tests.
 
 #### Step 2 — End-to-end test matrix (run in order)
 
-- [x] **Push to main** — OIDC token mints, `/ingest` accepts it, 2 metrics ingested (`coverage: 22.38%`, `duplication: 0.00%`)
-- [ ] **Push to feature branch** — Action exits cleanly with "Not on default branch" info log; job green, no 422, no metric written
-- [ ] **PR from same repo** — baselines fetched (from the push above), Check Run posted on PR head SHA with summary table; pass and fail cases exercised by adjusting `min-coverage`
+- [x] **Push to main** — OIDC token mints, `/ingest` accepts it, 2 metrics ingested (`coverage: 98.09%`, `duplication: 0.00%`)
+- [x] **Push to feature branch** — Action exits cleanly with "Not on default branch (test/matrix-threshold-and-branch ≠ main) — skipping ingest." info log; job green, no 422, no metric written
+- [x] **PR from same repo** — baselines fetched, Check Run posted on PR head SHA with summary table; pass (`min-coverage: '20'`) and fail (`min-coverage: '99'`) cases both verified via PR #2
 - [ ] **Fork PR** (if applicable) — OIDC mint fails gracefully (warning, not failure); Check Run post skipped gracefully
-- [ ] **jscpd** — auto-installs on a fresh runner; `jscpd-report.json` produced; duplication % appears in Check Run summary
-- [ ] **Threshold breach** — set `min-coverage: '99'`, confirm job fails with correct reason in Check Run summary
+- [x] **jscpd** — auto-installs on fresh runner; `Duplication: 0.00% (no clones detected)` collected; appears in Check Run summary table
+- [x] **Threshold breach** — `min-coverage: '99'` with coverage at 98.09%; action fails with "One or more coverage thresholds were not met.", Check Run posted with `conclusion: failure`
 
 **Go/Python parser paths are not exercised by this workflow.** The Layer 2 fixture script covers those; a repo with `go.mod` or `pyproject.toml` and a real coverage artifact is needed for full end-to-end verification of those paths.
 

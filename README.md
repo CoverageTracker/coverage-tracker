@@ -191,9 +191,9 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 | 1 | D1 schema | Complete |
 | 2 | Worker core (ingest, metrics, badge) | Complete |
 | 3 | GitHub App webhooks | Complete |
-| 4 | Thresholds + PR diff checks | Planned |
+| 4 | Thresholds + PR diff checks | Complete |
 | 5 | Svelte dashboard (Cloudflare Pages) | Planned |
-| 6 | Composite reporting Action | Planned |
+| 6 | Composite reporting Action | Complete |
 | 7 | "Deploy to Cloudflare" button | Planned |
 | 8 | Docs, OSS hygiene, public release | In progress |
 
