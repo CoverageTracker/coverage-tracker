@@ -18,7 +18,7 @@ interface ProjectWithTrend {
   latestCoverage: MetricPoint | null;
 }
 
-export const load: PageServerLoad = async ({ fetch, request }) => {
+export const load: PageServerLoad = async ({ fetch, request, platform }) => {
   const jwt = request.headers.get('Cf-Access-Jwt-Assertion') ?? '';
   const workerUrl = (env.WORKER_URL ?? '').replace(/\/$/, '');
   if (!workerUrl) throw error(500, 'WORKER_URL is not configured');
@@ -26,7 +26,9 @@ export const load: PageServerLoad = async ({ fetch, request }) => {
   const bypass = env.DEV_BYPASS_SECRET ?? '';
   const extraHeaders: Record<string, string> = bypass ? { 'x-dev-bypass': bypass } : {};
 
-  const projects = await fetchProjects(workerUrl, jwt, fetch, extraHeaders);
+  const apiFetch = platform?.env?.WORKER?.fetch.bind(platform.env.WORKER) ?? fetch;
+
+  const projects = await fetchProjects(workerUrl, jwt, apiFetch, extraHeaders);
 
   const projectsWithTrend: ProjectWithTrend[] = await Promise.all(
     projects.map(async (p) => {
@@ -40,7 +42,7 @@ export const load: PageServerLoad = async ({ fetch, request }) => {
           'coverage',
           p.default_branch,
           20,
-          fetch,
+          apiFetch,
           extraHeaders,
         );
         const latest = trend.data.at(-1) ?? null;
