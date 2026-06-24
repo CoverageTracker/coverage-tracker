@@ -1,6 +1,10 @@
 #!/usr/bin/env node
-// Creates WAF skip rules for machine-to-machine endpoints that must not be
-// gated by Bot Fight Mode or Browser Integrity Check.
+// Creates a WAF skip rule to disable Browser Integrity Check (BIC) for
+// machine-to-machine endpoints. BIC challenges non-browser User-Agents,
+// which breaks GitHub Actions runners posting to /ingest.
+//
+// Note: Bot Fight Mode cannot be bypassed per-path via WAF rules — it must
+// be toggled at the zone level (Security → Bots) if it causes issues.
 //
 //   /ingest          — protected by GitHub Actions OIDC token
 //   /webhooks/github — protected by HMAC webhook signature
@@ -72,7 +76,7 @@ const added = await cf(`/zones/${zoneId}/rulesets/${rulesetId}/rules`, {
   method: 'POST',
   body: JSON.stringify({
     action: 'skip',
-    action_parameters: { products: ['botFightMode', 'browserIntegrityCheck'] },
+    action_parameters: { products: ['bic'] },
     expression: EXPRESSION,
     description: DESCRIPTION,
     enabled: true,
