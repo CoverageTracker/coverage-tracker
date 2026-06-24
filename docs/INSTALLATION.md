@@ -282,6 +282,19 @@ Deployed coverage-tracker triggers
 
 The DNS record is created automatically. If you see `No targets deployed`, check that the `routes` entry in `wrangler.jsonc` uses `"custom_domain": true` and not a wildcard path.
 
+### Add WAF skip rules
+
+If you enable **Bot Fight Mode** or **Browser Integrity Check** on your Cloudflare zone, those security features will block the GitHub Actions runner (a non-browser client) from reaching `/ingest` and `/webhooks/github`. Both endpoints have their own auth (OIDC and HMAC respectively), so they don't need zone-level bot protection.
+
+Run the provided setup script to add a WAF skip rule for those paths:
+
+```bash
+CLOUDFLARE_API_TOKEN=<your-token> ZONE_DOMAIN=yourdomain.com \
+  bash scripts/setup-waf-rules.sh
+```
+
+The script is idempotent — safe to re-run. It requires a token with **Zone → WAF → Edit** permission.
+
 ---
 
 ## 12. Install the GitHub App on your repos
