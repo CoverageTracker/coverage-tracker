@@ -13,12 +13,12 @@ assert_eq() {
   local label="$1" expected="$2" actual="$3"
   if [[ "$actual" == "$expected" ]]; then
     echo "  PASS  $label"
-    ((PASS++))
+    (( ++PASS ))
   else
     echo "  FAIL  $label"
     echo "        expected: $expected"
     echo "        actual:   $actual"
-    ((FAIL++))
+    (( ++FAIL ))
   fi
 }
 
@@ -131,17 +131,15 @@ cat > "$JSCPD_FILE" <<'EOF'
 }
 EOF
 
-RESULT=$(python3 - <<PYEOF 2>/dev/null
-import json
-with open("$JSCPD_FILE") as f:
-    d = json.load(f)
+RESULT=$(python3 -c '
+import json, sys
+d = json.load(sys.stdin)
 try:
     val = float(d["statistics"]["total"]["percentage"])
 except (KeyError, TypeError, ValueError):
     val = 0.0
 print(f"{val:.2f}")
-PYEOF
-)
+' < "$JSCPD_FILE" 2>/dev/null)
 assert_eq "jscpd duplication %" "1.80" "$RESULT"
 
 # ── lizard --xml CPPNCSS format ──────────────────────────────────────────────
