@@ -34,6 +34,12 @@ async function fetchAccessJWKS(teamDomain: string, forceRefresh: boolean): Promi
 
 export function requireAccess() {
   return createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
+    // Local dev bypass — only active when DEV_BYPASS_SECRET is set (never in production)
+    const bypassSecret = c.env.DEV_BYPASS_SECRET;
+    if (bypassSecret && c.req.header('x-dev-bypass') === bypassSecret) {
+      return next();
+    }
+
     const assertion = c.req.header('Cf-Access-Jwt-Assertion');
     if (!assertion) {
       return c.json({ error: 'Missing Access token' }, 401);

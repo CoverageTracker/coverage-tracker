@@ -10,6 +10,8 @@ export interface Bindings {
   CF_ACCESS_AUD: string;
   /** e.g. myteam.cloudflareaccess.com */
   CF_ACCESS_TEAM_DOMAIN: string;
+  /** Local dev only — never set in wrangler.jsonc vars or production secrets */
+  DEV_BYPASS_SECRET?: string;
 }
 
 export interface Variables {

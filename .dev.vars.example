@@ -17,3 +17,8 @@ GITHUB_WEBHOOK_SECRET=
 CF_ACCESS_AUD=
 # Your Cloudflare Access team domain, e.g. myteam.cloudflareaccess.com
 CF_ACCESS_TEAM_DOMAIN=
+
+# Local dev only — lets the dashboard bypass Access JWT verification when running locally.
+# Set the same random string in dashboard/.dev.vars (or dashboard/.env).
+# NEVER add this to wrangler.jsonc vars or set it as a wrangler secret.
+DEV_BYPASS_SECRET=
