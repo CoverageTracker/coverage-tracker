@@ -2,5 +2,8 @@
   "name": "coverage-tracker-dashboard",
   "compatibility_date": "2024-11-01",
   "compatibility_flags": ["nodejs_compat"],
-  "pages_build_output_dir": ".svelte-kit/cloudflare"
+  "pages_build_output_dir": ".svelte-kit/cloudflare",
+  "services": [
+    { "binding": "WORKER", "service": "coverage-tracker" }
+  ]
 }
