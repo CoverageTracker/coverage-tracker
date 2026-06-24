@@ -2,7 +2,7 @@ name: Action self-test
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'test/**']
   pull_request:
 
 permissions:
@@ -33,3 +33,30 @@ jobs:
           min-coverage: '20'
           max-coverage-drop: '5'
           coverage-report-js: .github/actions/report/coverage/coverage-summary.json
+
+  # Verifies that a min-coverage threshold above actual coverage causes the
+  # action to fail. The breach step is allowed to fail; the assert step
+  # confirms it actually did (not just an OIDC skip or other early return).
+  threshold-breach:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Action runner
+        working-directory: .github/actions/report
+        run: npm ci && npm test
+
+      - id: breach
+        uses: ./.github/actions/report
+        continue-on-error: true
+        with:
+          worker-url: https://coverage-tracker.zerostash.org
+          min-coverage: '99'
+          coverage-report-js: .github/actions/report/coverage/coverage-summary.json
+
+      - name: Assert threshold breach failed the action
+        if: steps.breach.outcome != 'failure'
+        run: |
+          echo "Expected min-coverage 99 to fail, got '${{ steps.breach.outcome }}'"
+          exit 1
