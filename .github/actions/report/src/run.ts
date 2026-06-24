@@ -127,7 +127,7 @@ export async function runPRCheck(
   // Fetch baselines for all collected metrics
   const baselines: Record<string, number> = {};
   for (const m of metrics) {
-    const url = `${workerUrl}/api/projects/${owner}/${repo}/baseline?metric=${encodeURIComponent(m.name)}`;
+    const url = `${workerUrl}/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${oidcToken}` } });
     if (res.ok) {
       const data = (await res.json()) as BaselineResponse;

@@ -24756,7 +24756,7 @@ async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo) {
   const maxDuplication = parseThreshold(process.env.MAX_DUPLICATION);
   const baselines = {};
   for (const m of metrics) {
-    const url = `${workerUrl}/api/projects/${owner}/${repo}/baseline?metric=${encodeURIComponent(m.name)}`;
+    const url = `${workerUrl}/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${oidcToken}` } });
     if (res.ok) {
       const data = await res.json();

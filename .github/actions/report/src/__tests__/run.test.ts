@@ -232,7 +232,7 @@ describe('run()', () => {
     mockFetch.mockResolvedValue(errFetchResponse(404));
     await run();
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/projects/owner/repo/baseline'),
+      expect.stringContaining('/baseline/owner/repo'),
       expect.any(Object),
     );
   });
