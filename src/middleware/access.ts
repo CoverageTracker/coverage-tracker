@@ -1,4 +1,5 @@
 import { createMiddleware } from 'hono/factory';
+import { getCookie } from 'hono/cookie';
 import { importJWK, jwtVerify, decodeProtectedHeader, type JWK } from 'jose';
 import type { Bindings, Variables } from '../types';
 
@@ -40,7 +41,12 @@ export function requireAccess() {
       return next();
     }
 
-    const assertion = c.req.header('Cf-Access-Jwt-Assertion');
+    // SPA browser fetches to /api/* arrive without the Cf-Access-Jwt-Assertion header
+    // (Cloudflare Access only injects it at the edge for the dashboard routes).
+    // The browser sends the CF_Authorization cookie on same-origin requests instead.
+    const assertion =
+      c.req.header('Cf-Access-Jwt-Assertion') ?? getCookie(c, 'CF_Authorization');
+
     if (!assertion) {
       return c.json({ error: 'Missing Access token' }, 401);
     }
@@ -66,7 +72,7 @@ export function requireAccess() {
         algorithms: ['RS256'],
       });
     } catch {
-      return c.json({ error: 'Invalid Access token' }, 401);
+      return c.json({ error: 'Invalid Access token' }, 403);
     }
 
     await next();

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { requireAccess } from '../middleware/access';
-import { listProjectsWithOwners, getProjectBySlug, getMetricsTrend } from '../lib/db';
+import { listProjectsWithOwners, getProjectBySlug, getCoverageTrend, pickColumnValue } from '../lib/db';
+import { metricToColumn } from '../lib/metrics';
 import type { Bindings, Variables } from '../types';
 
 const api = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -21,8 +22,24 @@ api.get('/projects/:owner/:repo/metrics', requireAccess(), async (c) => {
   const branch = c.req.query('branch') ?? project.default_branch;
   const limit = Math.min(Number(c.req.query('limit') ?? '100'), 1000);
 
-  const rows = await getMetricsTrend(c.env.DB, project.id, branch, metric, limit);
-  return c.json({ project: fullSlug, branch, metric, data: rows });
+  const mapping = metricToColumn(metric);
+  if (!mapping) return c.json({ error: `Unknown metric: ${metric}` }, 400);
+
+  const points = await getCoverageTrend(c.env.DB, project.id, branch, limit);
+  const data = points
+    .map((p) => {
+      const value = pickColumnValue(p, mapping.column);
+      if (value === null) return null;
+      return {
+        commit_sha: p.commit_sha,
+        value,
+        unit: mapping.unit,
+        recorded_at: p.recorded_at,
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
+
+  return c.json({ project: fullSlug, branch, metric, data });
 });
 
 export default api;

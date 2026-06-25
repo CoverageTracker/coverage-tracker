@@ -1,4 +1,5 @@
-import type { Project, Owner } from '../types';
+import type { Project, Owner, CoverageRun } from '../types';
+import type { CoverageColumn } from './metrics';
 
 /**
  * Look up a project by its full_slug (e.g. "owner/repo").
@@ -189,4 +190,167 @@ export async function setBadgeEnabled(
     .prepare('UPDATE projects SET badge_enabled = ? WHERE id = ?')
     .bind(enabled ? 1 : 0, projectId)
     .run();
+}
+
+// ── coverage_runs / coverage_daily helpers ────────────────────────────────
+
+export async function upsertCoverageRun(
+  db: D1Database,
+  projectId: number,
+  commitSha: string,
+  branch: string,
+  ranAt: number,
+  fields: {
+    line_coverage: number;
+    branch_coverage?: number | null;
+    cyclomatic?: number | null;
+    cognitive?: number | null;
+    duplication_pct?: number | null;
+    maintainability?: number | null;
+  },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO coverage_runs
+         (project_id, commit_sha, branch, ran_at, line_coverage, branch_coverage,
+          cyclomatic, cognitive, duplication_pct, maintainability)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(project_id, commit_sha) DO UPDATE SET
+         branch          = excluded.branch,
+         ran_at          = excluded.ran_at,
+         line_coverage   = excluded.line_coverage,
+         branch_coverage = excluded.branch_coverage,
+         cyclomatic      = excluded.cyclomatic,
+         cognitive       = excluded.cognitive,
+         duplication_pct = excluded.duplication_pct,
+         maintainability = excluded.maintainability`,
+    )
+    .bind(
+      projectId,
+      commitSha,
+      branch,
+      ranAt,
+      fields.line_coverage,
+      fields.branch_coverage ?? null,
+      fields.cyclomatic ?? null,
+      fields.cognitive ?? null,
+      fields.duplication_pct ?? null,
+      fields.maintainability ?? null,
+    )
+    .run();
+}
+
+export async function getLatestCoverageRun(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+): Promise<CoverageRun | null> {
+  const row = await db
+    .prepare(
+      `SELECT * FROM coverage_runs
+       WHERE project_id = ? AND branch = ?
+       ORDER BY ran_at DESC
+       LIMIT 1`,
+    )
+    .bind(projectId, branch)
+    .first<CoverageRun>();
+  return row ?? null;
+}
+
+type LatestCoverage = Pick<
+  CoverageRun,
+  'commit_sha' | 'line_coverage' | 'branch_coverage' | 'cyclomatic' | 'cognitive' | 'duplication_pct' | 'maintainability'
+>;
+
+/**
+ * Returns the most recent coverage values for a project/branch.
+ * Checks coverage_runs first; falls back to coverage_daily for dormant repos
+ * whose raw runs have been pruned by the daily rollup cron.
+ */
+export async function getLatestCoverage(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+): Promise<LatestCoverage | null> {
+  const run = await getLatestCoverageRun(db, projectId, branch);
+  if (run) return run;
+
+  const daily = await db
+    .prepare(
+      `SELECT 'aggregated' AS commit_sha,
+              line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+       FROM coverage_daily
+       WHERE project_id = ?
+       ORDER BY day DESC
+       LIMIT 1`,
+    )
+    .bind(projectId)
+    .first<LatestCoverage>();
+  return daily ?? null;
+}
+
+export interface CoverageTrendPoint {
+  commit_sha: string;
+  recorded_at: string;
+  line_coverage: number;
+  branch_coverage: number | null;
+  cyclomatic: number | null;
+  cognitive: number | null;
+  duplication_pct: number | null;
+  maintainability: number | null;
+}
+
+export async function getCoverageTrend(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  limit: number,
+): Promise<CoverageTrendPoint[]> {
+  // Take the most-recent `limit` days across both tables, then reverse to ASC for display.
+  const { results } = await db
+    .prepare(
+      `SELECT commit_sha, recorded_at,
+              line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+       FROM (
+         SELECT 'aggregated' AS commit_sha,
+                day AS recorded_at,
+                line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+         FROM coverage_daily
+         WHERE project_id = ?1
+           AND day NOT IN (
+             SELECT DISTINCT strftime('%Y-%m-%d', ran_at, 'unixepoch')
+             FROM coverage_runs
+             WHERE project_id = ?1 AND branch = ?2
+           )
+
+         UNION ALL
+
+         SELECT commit_sha,
+                strftime('%Y-%m-%d', ran_at, 'unixepoch') AS recorded_at,
+                line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+         FROM (
+           SELECT *,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY strftime('%Y-%m-%d', ran_at, 'unixepoch')
+                    ORDER BY ran_at DESC
+                  ) AS rn
+           FROM coverage_runs
+           WHERE project_id = ?1 AND branch = ?2
+         )
+         WHERE rn = 1
+
+         ORDER BY recorded_at DESC
+         LIMIT ?3
+       )
+       ORDER BY recorded_at ASC`,
+    )
+    .bind(projectId, branch, limit)
+    .all<CoverageTrendPoint>();
+  return results;
+}
+
+/** Extract the right numeric value from a coverage trend point by column name. */
+export function pickColumnValue(point: CoverageTrendPoint, column: CoverageColumn): number | null {
+  const v = point[column];
+  return v != null ? v : null;
 }

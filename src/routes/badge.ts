@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { getProjectBySlug, getLatestMetric } from '../lib/db';
+import { getProjectBySlug, getLatestCoverage } from '../lib/db';
+import { metricToColumn, pickMetricValue } from '../lib/metrics';
 import type { Bindings, Variables } from '../types';
 
 const badge = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -15,15 +16,19 @@ badge.get('/:owner/:repo/:metric{.+\\.json}', async (c) => {
   const metricName = metricParam.replace(/\.json$/, '');
 
   const project = await getProjectBySlug(c.env.DB, `${owner}/${repo}`);
-  if (!project || project.badge_enabled === 0) {
-    return c.notFound();
-  }
+  if (!project || project.badge_enabled === 0) return c.notFound();
 
-  const row = await getLatestMetric(c.env.DB, project.id, project.default_branch, metricName);
-  if (!row) return c.notFound();
+  const mapping = metricToColumn(metricName);
+  if (!mapping) return c.notFound();
 
-  const message = row.unit === '%' ? `${row.value.toFixed(1)}%` : `${row.value}`;
-  const color = badgeColor(metricName, row.value);
+  const run = await getLatestCoverage(c.env.DB, project.id, project.default_branch);
+  if (!run) return c.notFound();
+
+  const value = pickMetricValue(run, mapping.column);
+  if (value === null) return c.notFound();
+
+  const message = mapping.unit === '%' ? `${value.toFixed(1)}%` : `${value}`;
+  const color = badgeColor(metricName, value);
 
   return c.json({
     schemaVersion: 1,

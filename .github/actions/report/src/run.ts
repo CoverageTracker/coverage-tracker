@@ -27,6 +27,17 @@ export interface ThresholdResult {
   reason: string;
 }
 
+/** Maps metrics-file metric names to typed fields in the new /api/ci/coverage payload. */
+const METRIC_TO_FIELD: Record<string, string> = {
+  coverage: 'line_coverage',
+  branch_coverage: 'branch_coverage',
+  complexity: 'cyclomatic',
+  cyclomatic: 'cyclomatic',
+  cognitive: 'cognitive',
+  duplication: 'duplication_pct',
+  maintainability: 'maintainability',
+};
+
 export async function run(): Promise<void> {
   const workerUrl = (process.env.WORKER_URL ?? '').replace(/\/$/, '');
   const metricsFile = process.env.METRICS_FILE ?? '';
@@ -90,24 +101,29 @@ export async function run(): Promise<void> {
 // ── Push path: ingest metrics ─────────────────────────────────────────────
 
 export async function runIngest(workerUrl: string, oidcToken: string, metrics: Metric[]): Promise<void> {
-  // Body carries only metric values; repo/branch/commit come from the OIDC token (A3)
-  const res = await fetch(`${workerUrl}/ingest`, {
+  // Map legacy metrics array to typed coverage fields
+  const body: Record<string, number> = {};
+  for (const m of metrics) {
+    const field = METRIC_TO_FIELD[m.name];
+    if (field) body[field] = m.value;
+  }
+
+  const res = await fetch(`${workerUrl}/api/ci/coverage`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${oidcToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ metrics }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    core.setFailed(`Ingest failed (HTTP ${res.status}): ${body}`);
+    const text = await res.text();
+    core.setFailed(`Ingest failed (HTTP ${res.status}): ${text}`);
     return;
   }
 
-  const data = (await res.json()) as { ok: boolean; inserted: number };
-  core.info(`Ingested ${data.inserted} metric(s).`);
+  core.info('Coverage report submitted.');
 }
 
 // ── PR path: fetch baselines, check thresholds, post Check Run ─────────────
@@ -127,7 +143,7 @@ export async function runPRCheck(
   // Fetch baselines for all collected metrics
   const baselines: Record<string, number> = {};
   for (const m of metrics) {
-    const url = `${workerUrl}/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
+    const url = `${workerUrl}/api/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${oidcToken}` } });
     if (res.ok) {
       const data = (await res.json()) as BaselineResponse;

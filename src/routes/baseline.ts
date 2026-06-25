@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { requireOidc } from '../middleware/oidc';
-import { getProjectBySlug, getLatestMetric } from '../lib/db';
+import { getProjectBySlug, getLatestCoverage } from '../lib/db';
+import { metricToColumn, pickMetricValue } from '../lib/metrics';
 import type { Bindings, Variables } from '../types';
 
 const baseline = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 /**
  * Latest metric value for a repo+branch — the baseline for threshold/PR checks.
- * OIDC-gated + project-scoped (mirrors /ingest — not behind Cloudflare Access).
+ * OIDC-gated + project-scoped (mirrors /api/ci — not behind Cloudflare Access).
  * The :owner/:repo path params are verified against the OIDC token as a sanity check.
  */
 baseline.get('/:owner/:repo', requireOidc(), async (c) => {
@@ -23,13 +24,26 @@ baseline.get('/:owner/:repo', requireOidc(), async (c) => {
     return c.json({ error: 'URL path does not match OIDC token repository' }, 403);
   }
 
-  const metric = c.req.query('metric') ?? 'coverage';
+  const metricName = c.req.query('metric') ?? 'coverage';
   const branch = c.req.query('branch') ?? project.default_branch;
 
-  const row = await getLatestMetric(c.env.DB, project.id, branch, metric);
-  if (!row) return c.json({ error: 'No data for this metric/branch' }, 404);
+  const mapping = metricToColumn(metricName);
+  if (!mapping) return c.json({ error: `Unknown metric: ${metricName}` }, 400);
 
-  return c.json({ project: claims.repository, branch, metric, ...row });
+  const run = await getLatestCoverage(c.env.DB, project.id, branch);
+  if (!run) return c.json({ error: 'No data for this metric/branch' }, 404);
+
+  const value = pickMetricValue(run, mapping.column);
+  if (value === null) return c.json({ error: 'No data for this metric/branch' }, 404);
+
+  return c.json({
+    project: claims.repository,
+    branch,
+    metric: metricName,
+    value,
+    unit: mapping.unit,
+    commit_sha: run.commit_sha,
+  });
 });
 
 export default baseline;

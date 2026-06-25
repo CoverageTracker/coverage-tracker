@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import type { Bindings, Variables } from './types';
+import { rollupAndPrune } from './db/rollup';
 
-import ingest from './routes/ingest';
+import ci from './routes/ci';
 import baseline from './routes/baseline';
 import api from './routes/api';
 import badge from './routes/badge';
@@ -10,13 +11,21 @@ import admin from './routes/admin';
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-app.route('/ingest', ingest);
-app.route('/baseline', baseline);
+app.route('/api/ci', ci);
+app.route('/api/baseline', baseline);
 app.route('/api', api);
-app.route('/badge', badge);
-app.route('/webhooks', webhooks);
-app.route('/admin', admin);
+app.route('/api/badge', badge);
+app.route('/api/webhooks', webhooks);
+app.route('/api/admin', admin);
 
-app.get('/', (c) => c.json({ name: 'coverage-tracker', status: 'ok' }));
+app.get('/api/health', (c) => c.json({ name: 'coverage-tracker', status: 'ok' }));
 
-export default app;
+// Static SPA assets — must be last; handles all non-/api/* paths.
+app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
+
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
+    ctx.waitUntil(rollupAndPrune(env));
+  },
+};

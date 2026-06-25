@@ -218,10 +218,10 @@ describe('run()', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('calls /ingest on a push to the default branch', async () => {
+  it('calls /api/ci/coverage on a push to the default branch', async () => {
     await run();
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://worker.example.com/ingest',
+      'https://worker.example.com/api/ci/coverage',
       expect.objectContaining({ method: 'POST' }),
     );
   });
@@ -248,10 +248,10 @@ describe('runIngest()', () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it('calls core.info with the inserted count on success', async () => {
-    mockFetch.mockResolvedValue(okFetchResponse({ ok: true, inserted: 2 }));
+  it('calls core.info with a success message on 2xx', async () => {
+    mockFetch.mockResolvedValue(okFetchResponse({}));
     await runIngest('https://worker.example.com', 'mock-token', metrics);
-    expect(vi.mocked(core.info)).toHaveBeenCalledWith('Ingested 2 metric(s).');
+    expect(vi.mocked(core.info)).toHaveBeenCalledWith('Coverage report submitted.');
   });
 
   it('calls core.setFailed on a non-OK HTTP response', async () => {
@@ -262,14 +262,15 @@ describe('runIngest()', () => {
     );
   });
 
-  it('sends repo/branch/commit only via the OIDC token (body has only metrics)', async () => {
-    mockFetch.mockResolvedValue(okFetchResponse({ ok: true, inserted: 2 }));
+  it('sends typed coverage fields (not a metrics array) in the request body', async () => {
+    mockFetch.mockResolvedValue(okFetchResponse({}));
     await runIngest('https://worker.example.com', 'mock-token', metrics);
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body).toEqual({ metrics });
+    // coverage → line_coverage, duplication → duplication_pct
+    expect(body).toEqual({ line_coverage: 85, duplication_pct: 0 });
+    expect(body).not.toHaveProperty('metrics');
     expect(body).not.toHaveProperty('repository');
-    expect(body).not.toHaveProperty('branch');
   });
 });
 

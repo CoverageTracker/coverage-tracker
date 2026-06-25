@@ -1,6 +1,6 @@
 export interface Bindings {
   DB: D1Database;
-  WORKER_URL: string;
+  ASSETS: Fetcher;
   GITHUB_APP_ID: string;
   GITHUB_APP_CLIENT_ID: string;
   /** PKCS#8 PEM-encoded RSA private key for the GitHub App */
@@ -79,4 +79,30 @@ export interface Metric {
   value: number;
   unit: string;
   recorded_at: string;
+}
+
+export interface CoverageRun {
+  id: number;
+  project_id: number;
+  commit_sha: string;
+  branch: string;
+  ran_at: number;
+  line_coverage: number;
+  branch_coverage: number | null;
+  cyclomatic: number | null;
+  cognitive: number | null;
+  duplication_pct: number | null;
+  maintainability: number | null;
+}
+
+export interface CoverageDaily {
+  project_id: number;
+  day: string;
+  line_coverage: number;
+  branch_coverage: number | null;
+  cyclomatic: number | null;
+  cognitive: number | null;
+  duplication_pct: number | null;
+  maintainability: number | null;
+  run_count: number;
 }
