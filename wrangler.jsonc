@@ -24,7 +24,6 @@
 		{
 			"binding": "DB",
 			"database_name": "coverage",
-			"database_id": "$CLOUDFLARE_D1_DATABASE_ID",
 			"migrations_dir": "migrations"
 		}
 	],
