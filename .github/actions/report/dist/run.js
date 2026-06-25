@@ -24689,6 +24689,15 @@ function getOctokit(token, options, ...additionalPlugins) {
 
 // src/run.ts
 var fs2 = __toESM(require("fs"));
+var METRIC_TO_FIELD = {
+  coverage: "line_coverage",
+  branch_coverage: "branch_coverage",
+  complexity: "cyclomatic",
+  cyclomatic: "cyclomatic",
+  cognitive: "cognitive",
+  duplication: "duplication_pct",
+  maintainability: "maintainability"
+};
 async function run() {
   const workerUrl = (process.env.WORKER_URL ?? "").replace(/\/$/, "");
   const metricsFile = process.env.METRICS_FILE ?? "";
@@ -24733,21 +24742,25 @@ async function run() {
   }
 }
 async function runIngest(workerUrl, oidcToken, metrics) {
-  const res = await fetch(`${workerUrl}/ingest`, {
+  const body = {};
+  for (const m of metrics) {
+    const field = METRIC_TO_FIELD[m.name];
+    if (field) body[field] = m.value;
+  }
+  const res = await fetch(`${workerUrl}/api/ci/coverage`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${oidcToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ metrics })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
-    const body = await res.text();
-    setFailed(`Ingest failed (HTTP ${res.status}): ${body}`);
+    const text = await res.text();
+    setFailed(`Ingest failed (HTTP ${res.status}): ${text}`);
     return;
   }
-  const data = await res.json();
-  info(`Ingested ${data.inserted} metric(s).`);
+  info("Coverage report submitted.");
 }
 async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo) {
   const minCoverage = parseThreshold(process.env.MIN_COVERAGE);
@@ -24756,7 +24769,7 @@ async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo) {
   const maxDuplication = parseThreshold(process.env.MAX_DUPLICATION);
   const baselines = {};
   for (const m of metrics) {
-    const url = `${workerUrl}/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
+    const url = `${workerUrl}/api/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${oidcToken}` } });
     if (res.ok) {
       const data = await res.json();
