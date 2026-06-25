@@ -8,6 +8,9 @@
 #     -in private-key.pem -out private-key-pkcs8.pem
 # Then paste the full PEM (including headers) as the value, with literal \n for newlines.
 
+# D1 database ID — find in Cloudflare dashboard under Workers & Pages > D1
+CLOUDFLARE_D1_DATABASE_ID=
+
 GITHUB_APP_ID=
 GITHUB_APP_CLIENT_ID=
 GITHUB_APP_PRIVATE_KEY=

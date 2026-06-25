@@ -3,7 +3,5 @@ node_modules/
 /dist/
 .*.vars
 !.*.vars.example
-wrangler.jsonc
-!dashboard/wrangler.jsonc
 *.local
 *.pem

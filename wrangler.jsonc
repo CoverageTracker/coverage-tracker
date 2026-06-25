@@ -1,0 +1,38 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "coverage-tracker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-06-25",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": "./dashboard/build",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": ["/api/*"]
+	},
+	// Explicit build command suppresses wrangler's Hono framework auto-detection.
+	// Hono here is the Worker router, not a front-end framework; the SvelteKit SPA
+	// is built separately. Dashboard node_modules must already be installed before
+	// wrangler deploy runs (handled by CI's "Install dashboard dependencies" step).
+	"build": {
+		"command": "npm --prefix dashboard run build"
+	},
+	"observability": { "enabled": true },
+	"triggers": { "crons": ["30 6 * * *"] },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "coverage",
+			"database_id": "$CLOUDFLARE_D1_DATABASE_ID",
+			"migrations_dir": "migrations"
+		}
+	]
+	// Secrets (set with `wrangler secret put <NAME>`):
+	//   GITHUB_APP_ID
+	//   GITHUB_APP_CLIENT_ID
+	//   GITHUB_APP_PRIVATE_KEY   — PKCS#8 PEM, see .dev.vars.example
+	//   GITHUB_WEBHOOK_SECRET
+	//   CF_ACCESS_AUD            — Access application AUD tag
+	//   CF_ACCESS_TEAM_DOMAIN    — e.g. myteam.cloudflareaccess.com
+	//   DEV_BYPASS_SECRET        — local dev only, never set in production
+}
