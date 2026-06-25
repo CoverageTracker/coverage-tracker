@@ -8,14 +8,14 @@ on:
       - 'dashboard/**'
       - 'migrations/**'
       - 'wrangler.jsonc'
-      - '.github/workflows/deploy-dashboard.yml'
+      - '.github/workflows/deploy.yml'
   pull_request:
     paths:
       - 'src/**'
       - 'dashboard/**'
       - 'migrations/**'
       - 'wrangler.jsonc'
-      - '.github/workflows/deploy-dashboard.yml'
+      - '.github/workflows/deploy.yml'
 
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
 
       - name: Deploy Worker + assets
         if: github.ref == 'refs/heads/main'
-        run: npx wrangler deploy
+        run: npx wrangler deploy --define CLOUDFLARE_D1_DATABASE_ID:"${CLOUDFLARE_D1_DATABASE_ID}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

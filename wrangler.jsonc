@@ -2,6 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "coverage-tracker",
 	"main": "src/index.ts",
+	"send_metrics": false,
 	"compatibility_date": "2026-06-25",
 	"compatibility_flags": ["nodejs_compat"],
 	"assets": {
@@ -26,7 +27,17 @@
 			"database_id": "$CLOUDFLARE_D1_DATABASE_ID",
 			"migrations_dir": "migrations"
 		}
-	]
+	],
+	"secrets": {
+		"required": [
+			"GITHUB_APP_ID",
+			"GITHUB_APP_CLIENT_ID",
+			"GITHUB_APP_PRIVATE_KEY",
+			"GITHUB_WEBHOOK_SECRET",
+			"CF_ACCESS_AUD",
+			"CF_ACCESS_TEAM_DOMAIN"
+		]
+	}
 	// Secrets (set with `wrangler secret put <NAME>`):
 	//   GITHUB_APP_ID
 	//   GITHUB_APP_CLIENT_ID
