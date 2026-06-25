@@ -1,5 +1,7 @@
 # coverage-tracker
 
+![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fcoverage-tracker.zerostash.org%2Fapi%2Fbadge%2FZeroStash%2Fcoverage-tracker%2Fcoverage.json)
+
 A self-hosted dashboard that tracks code coverage, cyclomatic complexity, and code duplication across your GitHub repositories — with trend charts, per-PR diff checks, and README badges.
 
 Runs entirely on your own Cloudflare account (Worker + D1 + Pages). Your data stays in your own database. No SaaS, no subscriptions, no third-party access to your metrics.
