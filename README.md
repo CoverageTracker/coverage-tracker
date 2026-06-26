@@ -19,7 +19,7 @@ Runs entirely on your own Cloudflare account (Worker + D1 + Pages). Your data st
 ┌─────────────────────────────────────────────────────────┐
 │  Your CI (GitHub Actions)                               │
 │                                                         │
-│  run tests → collect metrics → POST /ingest             │
+│  run tests → collect metrics → POST /api/ci/coverage    │
 │              (OIDC token, no static secret)             │
 └───────────────────────────┬─────────────────────────────┘
                             │
@@ -27,17 +27,19 @@ Runs entirely on your own Cloudflare account (Worker + D1 + Pages). Your data st
 ┌─────────────────────────────────────────────────────────┐
 │  Cloudflare Worker  (coverage-tracker.yourdomain.com)   │
 │                                                         │
-│  /ingest     ← OIDC-verified, project-scoped            │
-│  /api/*      ← Cloudflare Access (browser session)      │
-│  /badge/*    ← public (per-project opt-in)              │
-│  /webhooks/* ← GitHub HMAC                              │
-│  /admin/*    ← Cloudflare Access                        │
+│  POST /api/ci/coverage  ← OIDC-verified, project-scoped │
+│  GET  /api/projects/*   ← Cloudflare Access JWT         │
+│  GET  /api/badge/*      ← public (per-project opt-in)   │
+│  POST /api/webhooks/*   ← GitHub HMAC                   │
+│  POST /api/admin/*      ← Cloudflare Access JWT         │
+│  GET  /api/health       ← public                        │
+│  *                      ← dashboard SPA (static assets) │
 └───────────────────────────┬─────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │  Cloudflare D1  (your SQLite database)                  │
-│  owners · projects · metrics                            │
+│  owners · projects · coverage_runs · coverage_daily     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -62,7 +64,7 @@ See **[docs/INSTALLATION.md](docs/INSTALLATION.md)** for the full setup guide. T
 2. Create the D1 database and apply the migration
 3. Create a GitHub App (for webhooks + API access)
 4. Create a GitHub OAuth App (for Cloudflare Access login)
-5. Configure Cloudflare Zero Trust and deploy the Worker
+5. Configure Cloudflare Zero Trust and deploy the Worker (the dashboard SPA deploys with it automatically)
 6. Install the GitHub App on your repos
 
 ---
@@ -72,13 +74,13 @@ See **[docs/INSTALLATION.md](docs/INSTALLATION.md)** for the full setup guide. T
 Once a repo has metrics ingested and `badge_enabled` is turned on, add this to your README:
 
 ```markdown
-![Coverage](https://coverage-tracker.yourdomain.com/badge/owner/repo/coverage.json)
+![Coverage](https://coverage-tracker.yourdomain.com/api/badge/owner/repo/coverage.json)
 ```
 
 The endpoint returns [shields.io endpoint format](https://shields.io/endpoint), so you can use the shields.io URL builder to customise the label and style:
 
 ```markdown
-![Coverage](https://img.shields.io/endpoint?url=https://coverage-tracker.yourdomain.com/badge/owner/repo/coverage.json)
+![Coverage](https://img.shields.io/endpoint?url=https://coverage-tracker.yourdomain.com/api/badge/owner/repo/coverage.json)
 ```
 
 Available metric names: `coverage`, `complexity`, `duplication`.
@@ -90,7 +92,7 @@ To enable the badge for a project:
 npx wrangler d1 execute DB --remote --command "SELECT id, full_slug FROM projects"
 
 # Enable badge
-curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
+curl -X PATCH https://coverage-tracker.yourdomain.com/api/admin/projects/1/badge \
   -H "Cf-Access-Jwt-Assertion: <your-access-token>" \
   -H "Content-Type: application/json" \
   -d '{"enabled": true}'
@@ -102,9 +104,9 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
 
 ```
 .
-├── migrations/           # D1 schema migrations
+├── migrations/           # D1 schema migrations (0001 owners/projects, 0002 coverage_runs/daily)
 ├── src/
-│   ├── index.ts          # Hono app entry point
+│   ├── index.ts          # Hono app entry point + scheduled cron handler
 │   ├── types.ts          # Bindings and shared types
 │   ├── middleware/
 │   │   ├── access.ts     # Cloudflare Access JWT verification
@@ -113,23 +115,27 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
 │   ├── lib/
 │   │   ├── db.ts         # D1 query helpers
 │   │   ├── github.ts     # GitHub App token minting
+│   │   ├── metrics.ts    # Metric name → column mapping
 │   │   └── resync.ts     # Installation reconciliation
+│   ├── db/
+│   │   └── rollup.ts     # Daily coverage_runs → coverage_daily rollup + prune
 │   └── routes/
-│       ├── ingest.ts     # POST /ingest
-│       ├── api.ts        # GET /api/*
-│       ├── badge.ts      # GET /badge/*
-│       ├── webhooks.ts   # POST /webhooks/github
-│       └── admin.ts      # POST /admin/*
-├── dashboard/            # SvelteKit 5 dashboard on Cloudflare Pages
+│       ├── ci.ts         # POST /api/ci/coverage
+│       ├── baseline.ts   # GET  /api/baseline/:owner/:repo
+│       ├── api.ts        # GET  /api/projects/*
+│       ├── badge.ts      # GET  /api/badge/*
+│       ├── webhooks.ts   # POST /api/webhooks/github
+│       └── admin.ts      # POST /api/admin/*
+├── dashboard/            # SvelteKit 5 source; builds to dashboard/build/ (served by Worker)
 │   └── src/routes/       # Overview + per-repo drill-in views
 ├── .github/
 │   ├── actions/report/   # Composite reporting Action (collect + ingest + Check Runs)
-│   └── workflows/        # CI: action-test.yml, deploy-dashboard.yml
+│   └── workflows/        # CI: action-test.yml, deploy.yml
 ├── scripts/
-│   └── setup-waf-rules.mjs  # WAF skip rule for /ingest + /webhooks/github (Node 18+)
+│   └── setup-waf-rules.mjs  # WAF skip rule for /api/ci/coverage + /api/webhooks/github
 ├── test/
-│   ├── collect-parsers.sh   # Parser fixture tests for collect.sh
-│   └── seed-local.sql       # Local D1 seed data for dashboard dev
+│   ├── seed-local.sql       # Local D1 seed data
+│   └── collect-parsers.sh   # Parser fixture tests for collect.sh
 ├── docs/
 │   ├── INSTALLATION.md   # Setup guide
 │   ├── PROGRESS.md       # Phase implementation status
@@ -144,28 +150,30 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/ingest` | OIDC token | Push a metrics datapoint from CI |
+| `POST` | `/api/ci/coverage` | OIDC token | Push typed coverage metrics from CI |
 | `GET` | `/api/projects` | Access | List all registered owners and repos |
 | `GET` | `/api/projects/:owner/:repo/metrics` | Access | Trend data for one repo |
-| `GET` | `/api/projects/:owner/:repo/baseline` | OIDC token | Latest value on default branch (for threshold checks) |
-| `GET` | `/badge/:owner/:repo/:metric.json` | Public | shields.io endpoint — only for `badge_enabled` repos |
-| `POST` | `/webhooks/github` | GitHub HMAC | GitHub App installation events |
-| `POST` | `/admin/resync` | Access | Reconcile projects table against GitHub |
-| `PATCH` | `/admin/projects/:id/badge` | Access | Toggle badge visibility |
+| `GET` | `/api/baseline/:owner/:repo` | OIDC token | Latest value on default branch (threshold checks) |
+| `GET` | `/api/badge/:owner/:repo/:metric.json` | Public | shields.io endpoint — only for `badge_enabled` repos |
+| `POST` | `/api/webhooks/github` | GitHub HMAC | GitHub App installation events |
+| `POST` | `/api/admin/resync` | Access | Reconcile projects table against GitHub |
+| `PATCH` | `/api/admin/projects/:id/badge` | Access | Toggle badge visibility |
+| `GET` | `/api/health` | Public | Liveness check |
 
-### `/ingest` payload
+### `/api/ci/coverage` payload
 
 ```json
 {
-  "metrics": [
-    { "name": "coverage",    "value": 82.4, "unit": "%" },
-    { "name": "complexity",  "value": 4.2,  "unit": "score" },
-    { "name": "duplication", "value": 1.8,  "unit": "%" }
-  ]
+  "line_coverage": 82.4,
+  "branch_coverage": 79.1,
+  "cyclomatic": 4.2,
+  "cognitive": 2.1,
+  "duplication_pct": 1.8,
+  "maintainability": 95.0
 }
 ```
 
-`repository`, `branch`, and `commit_sha` are derived from the OIDC token claims — the body values are ignored for those fields.
+`line_coverage` is required; all other fields are optional. `repository`, `branch`, and `commit_sha` are derived from the OIDC token claims — they are not accepted in the body.
 
 ---
 
@@ -173,10 +181,11 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
 
 ```bash
 npm install
-cp wrangler.example.jsonc wrangler.jsonc   # fill in your D1 database ID and domain
+npm --prefix dashboard install             # install dashboard dependencies
+cp wrangler.example.jsonc wrangler.jsonc   # fill in your D1 database ID
 cp .dev.vars.example .dev.vars             # fill in local secrets
 npm run db:migrate:local                   # apply schema to local D1
-npm run dev                                # start local Worker
+npm run dev                                # start Worker + SPA (builds dashboard first)
 ```
 
 Type-check:
@@ -200,12 +209,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | D1 schema | Complete |
-| 2 | Worker core (ingest, metrics, badge) | Complete |
-| 3 | GitHub App webhooks | Complete |
-| 4 | Thresholds + PR diff checks | Complete |
-| 5 | Svelte dashboard (Cloudflare Pages) | Complete |
-| 6 | Composite reporting Action | Complete |
+| 1–6 | Core Worker, webhooks, dashboard, reporting Action | Complete |
+| — | Convergence refactor (single Worker + static assets) | Complete |
 | 7 | "Deploy to Cloudflare" button | Planned |
 | 8 | Docs, OSS hygiene, public release | In progress |
 
