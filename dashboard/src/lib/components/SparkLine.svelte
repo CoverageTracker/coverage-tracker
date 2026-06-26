@@ -1,20 +1,33 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import uPlot from 'uplot';
   import 'uplot/dist/uPlot.min.css';
 
-  let { timestamps, values }: { timestamps: number[]; values: number[] } = $props();
+  let {
+    timestamps,
+    values,
+    color,
+  }: { timestamps: number[]; values: number[]; color: string } = $props();
+
   let container: HTMLDivElement;
+  let chart: uPlot | null = null;
 
-  onMount(() => {
-    if (timestamps.length < 2) return;
+  function hexAlpha(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
 
-    const chart = new uPlot(
+  function buildChart(c: string) {
+    chart?.destroy();
+    if (timestamps.length < 2 || !container) { chart = null; return; }
+
+    chart = new uPlot(
       {
-        width: 160,
-        height: 48,
+        width: 150,
+        height: 44,
         padding: [4, 0, 4, 0],
-        axes: [],
+        axes: [{ show: false, size: 0 }, { show: false, size: 0 }],
         scales: { x: { time: true } },
         legend: { show: false },
         cursor: { show: false },
@@ -22,17 +35,21 @@
         series: [
           {},
           {
-            stroke: 'var(--color-accent)',
-            fill: 'var(--color-accent-faint)',
+            stroke: c,
+            fill: hexAlpha(c, 0.2),
             width: 1.5,
+            points: { show: false },
           },
         ],
       },
       [timestamps, values],
       container,
     );
+  }
 
-    return () => chart.destroy();
+  $effect(() => {
+    buildChart(color);
+    return () => { chart?.destroy(); chart = null; };
   });
 </script>
 
