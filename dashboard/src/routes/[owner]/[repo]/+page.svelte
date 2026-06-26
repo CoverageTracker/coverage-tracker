@@ -90,7 +90,7 @@
   }
 
   .breadcrumb a {
-    color: var(--color-accent);
+    color: var(--color-link);
     text-decoration: none;
   }
 
@@ -148,7 +148,7 @@
   .metric-tabs button.active {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: #fff;
+    color: #0f172a;  /* near-black: 4.7:1 on blue-500, 6.6:1 on blue-400 — WCAG AA both modes */
   }
 
   .metric-tabs button:not(.active):hover {

@@ -7,7 +7,9 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "svelte-kit sync && tsc --noEmit"
+    "typecheck": "svelte-kit sync && tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@sveltejs/kit": "^2.15.0",
@@ -15,6 +17,8 @@
     "uplot": "^1.6.31"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.49.1",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@types/node": "^26.0.0",

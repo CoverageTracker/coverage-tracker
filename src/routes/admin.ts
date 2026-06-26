@@ -26,8 +26,8 @@ admin.post('/resync', requireAccess(), async (c) => {
   try {
     await performResync(installationId, c.env);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return c.json({ error: `Resync failed: ${message}` }, 502);
+    console.error('Resync failed:', err);
+    return c.json({ error: 'Resync failed' }, 502);
   }
 
   return c.json({ ok: true });

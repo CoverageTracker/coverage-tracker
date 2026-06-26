@@ -5,3 +5,5 @@ build/
 .env.*
 !.env.example
 .dev.vars
+playwright-report/
+test-results/

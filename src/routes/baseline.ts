@@ -26,6 +26,7 @@ baseline.get('/:owner/:repo', requireOidc(), async (c) => {
 
   const metricName = c.req.query('metric') ?? 'coverage';
   const branch = c.req.query('branch') ?? project.default_branch;
+  if (branch.length > 255) return c.json({ error: 'Invalid branch' }, 400);
 
   const mapping = metricToColumn(metricName);
   if (!mapping) return c.json({ error: `Unknown metric: ${metricName}` }, 400);

@@ -43,7 +43,8 @@ export async function getInstallationToken(
   );
 
   if (!res.ok) {
-    throw new Error(`Failed to mint installation token: ${res.status} ${await res.text()}`);
+    console.error(`Failed to mint installation token: ${res.status}`, await res.text());
+    throw new Error('Failed to mint installation token');
   }
 
   const data = await res.json() as { token: string; expires_at: string };

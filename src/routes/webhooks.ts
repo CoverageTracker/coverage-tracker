@@ -12,12 +12,16 @@ webhooks.post('/github', requireWebhookHmac(), async (c) => {
   const rawBody = c.get('rawBody');
   const payload = JSON.parse(rawBody) as Record<string, unknown>;
 
-  if (event === 'installation') {
-    await handleInstallation(payload, c.env);
-  } else if (event === 'installation_repositories') {
-    await handleInstallationRepositories(payload, c.env);
+  try {
+    if (event === 'installation') {
+      await handleInstallation(payload, c.env);
+    } else if (event === 'installation_repositories') {
+      await handleInstallationRepositories(payload, c.env);
+    }
+    // Unrecognised events are acknowledged and ignored
+  } catch (err) {
+    console.error('Webhook handler error:', err);
   }
-  // Unrecognised events are acknowledged and ignored
 
   return c.json({ ok: true });
 });
@@ -49,6 +53,10 @@ async function handleInstallation(payload: Record<string, unknown>, env: Binding
 
   if (action === 'created') {
     const { account } = installation;
+    if (account.type !== 'User' && account.type !== 'Organization') {
+      console.error(`Unexpected account type in installation payload: ${account.type}`);
+      return;
+    }
     const ownerId = await upsertOwner(env.DB, account.id, account.login, account.type, account.avatar_url);
 
     const repos = (payload.repositories as WebhookRepo[] | undefined) ?? [];
@@ -73,6 +81,10 @@ async function handleInstallationRepositories(
   const { account } = installation;
 
   if (action === 'added') {
+    if (account.type !== 'User' && account.type !== 'Organization') {
+      console.error(`Unexpected account type in installation_repositories payload: ${account.type}`);
+      return;
+    }
     const ownerId = await upsertOwner(env.DB, account.id, account.login, account.type, account.avatar_url);
     const added = (payload.repositories_added as WebhookRepo[]) ?? [];
     const instToken = await getInstallationToken(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY, installationId);

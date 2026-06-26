@@ -20,6 +20,7 @@ api.get('/projects/:owner/:repo/metrics', requireAccess(), async (c) => {
 
   const metric = c.req.query('metric') ?? 'coverage';
   const branch = c.req.query('branch') ?? project.default_branch;
+  if (branch.length > 255) return c.json({ error: 'Invalid branch' }, 400);
   const limit = Math.min(Number(c.req.query('limit') ?? '100'), 1000);
 
   const mapping = metricToColumn(metric);

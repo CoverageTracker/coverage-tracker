@@ -55,6 +55,7 @@ export function requireAccess() {
 
     try {
       const header = decodeProtectedHeader(assertion);
+      if (header.alg !== 'RS256') throw new Error(`Unexpected algorithm: ${header.alg}`);
       let jwks = await fetchAccessJWKS(CF_ACCESS_TEAM_DOMAIN, false);
       let jwk = jwks.keys.find((k) => k.kid === header.kid);
 

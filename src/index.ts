@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { secureHeaders } from 'hono/secure-headers';
 import type { Bindings, Variables } from './types';
 import { rollupAndPrune } from './db/rollup';
 
@@ -10,6 +11,8 @@ import webhooks from './routes/webhooks';
 import admin from './routes/admin';
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+app.use('*', secureHeaders());
 
 app.route('/api/ci', ci);
 app.route('/api/baseline', baseline);
