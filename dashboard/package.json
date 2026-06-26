@@ -12,8 +12,6 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@fontsource/inter": "^5.2.8",
-    "@fontsource/jetbrains-mono": "^5.2.8",
     "@sveltejs/kit": "^2.15.0",
     "svelte": "^5.0.0",
     "uplot": "^1.6.31"
