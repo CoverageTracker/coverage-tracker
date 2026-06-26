@@ -68,23 +68,17 @@ Implemented as part of the Phase 6 Action (the two are tightly coupled). E2E ver
 
 ---
 
-## Phase 5 — Svelte dashboard ✅ Complete
+## Phase 5 — Svelte dashboard ✅ Complete (integrated into Worker — see Convergence Refactor)
 
-Dashboard built in `dashboard/` (SvelteKit 5 + `@sveltejs/adapter-cloudflare`). All API calls server-side; local dev uses `DEV_BYPASS_SECRET` bypass. Service Token refactor documented in `docs/plans/service-auth-token.md`.
+Dashboard built in `dashboard/` (SvelteKit 5). Builds to `dashboard/build/` and is served by the Worker via Workers Static Assets. All API calls are server-side; local dev uses `DEV_BYPASS_SECRET` bypass.
 
 - [x] SvelteKit 5 app in `dashboard/` with `@sveltejs/adapter-cloudflare`
 - [x] Owner/repo grouping — top-level cards with latest coverage % + uPlot sparklines
 - [x] Drill-in view: full uPlot trend charts per metric (coverage/complexity/duplication), branch selector
 - [x] `Cf-Access-Jwt-Assertion` forwarded server-side to Worker; never touches browser JS
 - [x] Local dev bypass (`DEV_BYPASS_SECRET`) — dead code in production; documented in `.dev.vars.example`
-- [x] `dashboard/wrangler.toml` anchors adapter to dashboard dir (prevents root Worker config bleed)
 - [x] `test/seed-local.sql` + `db:seed:local` npm script for local D1 test data
-- [x] `.github/workflows/deploy-dashboard.yml` — Direct Upload via `wrangler pages deploy`; previews on PRs, production on push to main; skips Dependabot PRs
-- [x] GitHub Actions pinned to Node.js 24 compatible versions: `actions/checkout@v7` (SHA-pinned), `actions/setup-node@v6` (SHA-pinned)
-- [x] Cloudflare Pages project created (`coverage-tracker-dashboard`, production branch: `main`)
-- [x] `WORKER_URL` set as Pages secret
-- [x] `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` added as GitHub Actions repo secrets
-- [x] Cloudflare Access application protecting the Pages hostname
+- [x] ~~Separate Cloudflare Pages project~~ — superseded by Convergence Refactor; dashboard now ships with the Worker
 
 ---
 
@@ -126,15 +120,16 @@ The inline Python parsers are the riskiest part of `collect.sh` — tool output 
 
 - [x] Create `test/collect-parsers.sh` — fixture tests covering all 6 parsers (Istanbul, coverage.py, go cover, radon, jscpd, lizard CPPNCSS)
 
-#### Layer 3 — Worker route + middleware tests (follow-on)
+#### Layer 3 — Worker route + middleware tests ✅ Complete
 
-High value but a real setup cost — requires `@cloudflare/vitest-pool-workers`, mock JWTs, and an in-memory D1 seeded with the migration. Does not block the self-test. Prioritise after Layers 1–2 are green.
+Implemented with `@cloudflare/vitest-pool-workers` and real D1 bindings during the Convergence Refactor.
 
-- [ ] `vitest-pool-workers` setup at repo root with `wrangler.test.jsonc`
-- [ ] OIDC middleware: bad `alg`, wrong `aud`, wrong `iss`, expired token, unknown `kid` all reject
-- [ ] `POST /ingest`: repo/branch/commit derive from token claims (not body); non-default branch → 422; duplicate commit → idempotent (no second row)
-- [ ] `GET /baseline`: OIDC-gated; 404 for unregistered repo; returns correct latest value for registered repo
-- [ ] Webhook handler: HMAC verification rejects bad signature; `installation: created` upserts correct rows
+- [x] `vitest-pool-workers` setup at repo root
+- [x] OIDC middleware: bad `alg`, wrong `aud`, wrong `iss`, expired token, unknown `kid` all reject (`test/ci.test.ts`)
+- [x] `POST /api/ci/coverage`: repo/branch/commit derive from token claims; non-default branch → 422; duplicate commit → idempotent upsert (`test/ci.test.ts`)
+- [x] Coverage run queries and trend data (`test/db.test.ts`)
+- [x] Daily rollup + prune idempotency (`test/rollup.test.ts`)
+- [x] Route registration, catch-all SPA fallback (`test/routing.test.ts`)
 
 ---
 
@@ -155,6 +150,25 @@ Self-test workflow created. Uses `min-coverage: '20'`; actual coverage is 98.09%
 
 ---
 
+---
+
+## Convergence Refactor ✅ Complete
+
+Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a single Worker serving both the SvelteKit SPA and all API routes. See `docs/plans/coverage-tracker-convergence-plan.md` for the full design.
+
+- [x] Single `wrangler.jsonc` — `assets.directory: ./dashboard/build`, `run_worker_first: ["/api/*"]`, `not_found_handling: single-page-application`
+- [x] `build.command: npm --prefix dashboard run build` — SvelteKit compiles on `wrangler deploy`
+- [x] All routes moved under `/api/*`; SPA served via `ASSETS` catch-all
+- [x] `coverage_runs` (14-day retention) + `coverage_daily` (permanent) tables — `migrations/0002_coverage.sql`
+- [x] Daily rollup cron (`30 6 * * *`) — `src/db/rollup.ts` → last-of-day snapshot + prune
+- [x] Cloudflare Access scoped to dashboard paths only; `/api/*` auth enforced in code
+- [x] Stack: Hono + jose + zod; `nodejs_compat` compatibility flag
+- [x] `src/lib/metrics.ts` — metric name → D1 column mapping
+- [x] `src/routes/ci.ts` → `POST /api/ci/coverage` (typed columns, not EAV)
+- [x] `src/routes/baseline.ts` → `GET /api/baseline/:owner/:repo` (OIDC-gated)
+
+---
+
 ## Phase 7 — "Deploy to Cloudflare" button ⬜ Not started
 
 - [ ] `deploy` npm script that includes `wrangler d1 migrations apply` so D1 is provisioned on first deploy
@@ -165,10 +179,10 @@ Self-test workflow created. Uses `min-coverage: '20'`; actual coverage is 98.09%
 
 ## Phase 8 — Docs, OSS hygiene, public release 🔶 In progress
 
-- [x] `docs/INSTALLATION.md` — full 13-step guide with lessons learned
+- [x] `docs/INSTALLATION.md` — full setup guide, updated for converged architecture
 - [x] Repository public at `github.com/ZeroStash/coverage-tracker`
-- [x] `wrangler.example.jsonc` and `.dev.vars.example` committed as templates
-- [ ] `README.md` — root-level project overview, quick-start, badge examples
+- [x] `wrangler.example.jsonc` and `.dev.vars.example` committed as templates (updated for convergence)
+- [x] `README.md` — root-level project overview, quick-start, badge examples (updated for convergence)
 - [ ] `CONTRIBUTING.md`
 - [ ] GitHub issue templates
 - [ ] Pre-commit secret scan (gitleaks) in CI (A9)

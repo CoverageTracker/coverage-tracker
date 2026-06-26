@@ -52,7 +52,7 @@ cp wrangler.example.jsonc wrangler.jsonc
 Then create the database:
 
 ```bash
-npx wrangler d1 create coverage-tracker
+npx wrangler d1 create coverage
 ```
 
 Copy the `database_id` from the output and paste it into `wrangler.jsonc`:
@@ -61,31 +61,16 @@ Copy the `database_id` from the output and paste it into `wrangler.jsonc`:
 "d1_databases": [
   {
     "binding": "DB",
-    "database_name": "coverage-tracker",
+    "database_name": "coverage",
     "database_id": "YOUR_DATABASE_ID_HERE",   // ← paste here
     "migrations_dir": "migrations"
   }
 ]
 ```
 
-Also update `WORKER_URL` in the `vars` section to the subdomain you intend to use:
+Also update the `assets.directory` if you need to change where the SvelteKit build lands (the default `./dashboard/build` is correct for this repo), and verify the `run_worker_first` setting remains `["/api/*"]` so all non-API requests fall through to the SPA assets.
 
-```jsonc
-"vars": {
-  "WORKER_URL": "https://coverage-tracker.yourdomain.com"
-}
-```
-
-And update the `routes` entry:
-
-```jsonc
-"routes": [
-  { "pattern": "coverage-tracker.yourdomain.com", "custom_domain": true }
-]
-```
-
-> **Note:** `custom_domain: true` tells Wrangler to create the DNS record automatically.
-> Do not add a wildcard (`/*`) when using `custom_domain: true` — just the bare hostname.
+> **Note:** There is no `WORKER_URL` var or `routes` entry in the new config. The custom domain is attached to the Worker directly in the Cloudflare dashboard after first deploy (see Step 11), and the Worker URL is not referenced in Worker code.
 
 ---
 
@@ -239,17 +224,21 @@ Zero Trust → **Access → Applications → Add an application → Self-hosted*
 | Session duration | Your preference (e.g. 24 hours) |
 | Identity providers | GitHub (the one added in Step 9) |
 
-**Application domain — add two entries:**
+**Application domain — protect the dashboard only:**
 
 | Domain | Path |
 |--------|------|
-| `coverage-tracker.yourdomain.com` | `/api` |
-| `coverage-tracker.yourdomain.com` | `/admin` |
+| `coverage-tracker.yourdomain.com` | *(leave blank — protects the whole domain)* |
 
-> **Critical:** Protect only `/api` and `/admin`, not the whole domain.
-> The `/ingest` and `/webhooks/github` routes are used by CI and GitHub respectively —
-> they must not be blocked by Access. They are protected by OIDC and HMAC instead.
-> The `/badge` route is intentionally public.
+> **Critical:** Do **not** add `/api` or `/admin` as protected paths. All `/api/*` routes
+> enforce their own auth in code: OIDC for CI ingest, HMAC for webhooks, and Access JWT
+> middleware for `/api/projects/*` and `/api/admin/*`. Adding a Cloudflare Access edge policy
+> on `/api/*` would block the GitHub Actions runner (OIDC ingest) and GitHub webhook
+> deliveries — both are non-browser clients that cannot complete the Access flow.
+>
+> The dashboard SPA (served from the root and any non-`/api` path) is what Access should
+> protect. Because `/api/*` bypasses edge Access by design, the Worker verifies the Access
+> JWT in middleware for all routes that require login (`requireAccess()`).
 
 Add a policy:
 - **Policy name:** Allow deployer
@@ -280,11 +269,13 @@ Deployed coverage-tracker triggers
   coverage-tracker.yourdomain.com (custom domain)
 ```
 
-The DNS record is created automatically. If you see `No targets deployed`, check that the `routes` entry in `wrangler.jsonc` uses `"custom_domain": true` and not a wildcard path.
+> **Note:** The first deploy also runs `npm --prefix dashboard run build` to compile the
+> SvelteKit dashboard before uploading. Make sure dashboard dependencies are installed
+> (`npm --prefix dashboard install`) before running this step.
 
 ### Add WAF skip rules
 
-If you enable **Bot Fight Mode** or **Browser Integrity Check** on your Cloudflare zone, those security features will block the GitHub Actions runner (a non-browser client) from reaching `/ingest` and `/webhooks/github`. Both endpoints have their own auth (OIDC and HMAC respectively), so they don't need zone-level bot protection.
+If you enable **Bot Fight Mode** or **Browser Integrity Check** on your Cloudflare zone, those security features will block the GitHub Actions runner (a non-browser client) from reaching `/api/ci/coverage` and `/api/webhooks/github`. Both endpoints have their own auth (OIDC and HMAC respectively), so they don't need zone-level bot protection.
 
 Run the provided setup script to add a WAF skip rule for those paths:
 
@@ -367,7 +358,7 @@ If the owners table has a row but projects is empty, the GitHub App was likely i
 # GitHub → Your org → Settings → Third-party Access → GitHub Apps → Configure
 # The installation ID is the number at the end of the URL.
 
-curl -X POST https://coverage-tracker.yourdomain.com/admin/resync \
+curl -X POST https://coverage-tracker.yourdomain.com/api/admin/resync \
   -H "Cf-Access-Jwt-Assertion: <your-access-token>" \
   -H "Content-Type: application/json" \
   -d '{"installationId": YOUR_INSTALLATION_ID}'
@@ -377,66 +368,37 @@ If both tables have rows, the installation is complete and the Worker is ready t
 
 ---
 
-## 14. Deploy the dashboard
+## 14. Dashboard
 
-The dashboard is a SvelteKit app in `dashboard/` that deploys to Cloudflare Pages via Direct Upload (GitHub Actions).
+The SvelteKit dashboard in `dashboard/` is compiled by `wrangler deploy` automatically (via the `build.command` in `wrangler.jsonc`) and served as static assets by the same Worker. There is no separate Cloudflare Pages project.
 
-### Create the Pages project
+**After first deploy**, navigate to `https://coverage-tracker.yourdomain.com` — Cloudflare Access will prompt you to log in with the identity provider you configured in Step 9. Once authenticated, the dashboard loads and shows all registered repos.
 
-```bash
-cd dashboard
-npx wrangler pages project create coverage-tracker-dashboard --production-branch main
-```
+If the dashboard returns a blank page or 404, check:
+- The SvelteKit build completed without errors (`npm --prefix dashboard run build` locally)
+- The `assets.directory` in `wrangler.jsonc` points to `./dashboard/build`
+- The `run_worker_first: ["/api/*"]` setting is present (so non-API paths serve the SPA)
 
-### Set the Worker URL
-
-```bash
-# Still inside dashboard/
-npx wrangler pages secret put WORKER_URL
-# Enter: https://coverage-tracker.yourdomain.com
-```
-
-### Add GitHub Actions secrets
-
-In your GitHub repo → **Settings → Secrets and variables → Actions**, add:
-
-| Secret | Value |
-|--------|-------|
-| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token with *Cloudflare Pages: Edit* permission |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (visible in the Workers dashboard URL) |
-
-### Connect the Access application
-
-The dashboard needs its own Cloudflare Access application to restrict who can view it.
-
-Zero Trust → **Access → Applications → Add an application → Self-hosted**
-
-| Field | Value |
-|-------|-------|
-| App name | `coverage-tracker-dashboard` |
-| Application domain | `coverage-tracker-dashboard.pages.dev` *(or your custom domain)* |
-| Identity providers | GitHub (same as the Worker app) |
-
-Add the same Allow policy (email allowlist) as the Worker Access app.
-
-### First deploy
-
-Push any change to `dashboard/` on `main`, or trigger the workflow manually — the CI job builds and deploys automatically on every push.
+The dashboard is served from the same domain and behind the same Cloudflare Access application you created in Step 10. No separate Pages project or additional Access app is needed.
 
 ---
 
 ## Next steps
 
-- **Ingest metrics from CI:** Add a workflow to your repos that posts coverage/complexity/duplication data to `/ingest` using a GitHub Actions OIDC token. See the reporting Action docs (Phase 6).
+- **Ingest metrics from CI:** Add a workflow to your repos that posts coverage data to `/api/ci/coverage` using a GitHub Actions OIDC token. See the reporting Action docs (`.github/actions/report/`).
 - **Enable badges:** Opt individual repos into the public badge endpoint:
   ```bash
   # Find the project ID first
   npx wrangler d1 execute DB --remote --command "SELECT id, full_slug FROM projects"
 
   # Enable badge for a specific project
-  curl -X PATCH https://coverage-tracker.yourdomain.com/admin/projects/1/badge \
+  curl -X PATCH https://coverage-tracker.yourdomain.com/api/admin/projects/1/badge \
     -H "Cf-Access-Jwt-Assertion: <your-access-token>" \
     -H "Content-Type: application/json" \
     -d '{"enabled": true}'
   ```
-- **Resync if repos drift:** If you add/remove repos from the GitHub App installation and the webhook is missed, trigger a manual resync via `POST /admin/resync` with `{"installationId": YOUR_INSTALLATION_ID}`.
+  Then add the badge to your repo's README:
+  ```markdown
+  ![Coverage](https://img.shields.io/endpoint?url=https://coverage-tracker.yourdomain.com/api/badge/YourOrg/repo-name/coverage.json)
+  ```
+- **Resync if repos drift:** If you add/remove repos from the GitHub App installation and the webhook is missed, trigger a manual resync via `POST /api/admin/resync` with `{"installationId": YOUR_INSTALLATION_ID}`.

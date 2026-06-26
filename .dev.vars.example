@@ -8,9 +8,6 @@
 #     -in private-key.pem -out private-key-pkcs8.pem
 # Then paste the full PEM (including headers) as the value, with literal \n for newlines.
 
-# D1 database ID — find in Cloudflare dashboard under Workers & Pages > D1
-CLOUDFLARE_D1_DATABASE_ID=
-
 GITHUB_APP_ID=
 GITHUB_APP_CLIENT_ID=
 GITHUB_APP_PRIVATE_KEY=
@@ -21,7 +18,8 @@ CF_ACCESS_AUD=
 # Your Cloudflare Access team domain, e.g. myteam.cloudflareaccess.com
 CF_ACCESS_TEAM_DOMAIN=
 
-# Local dev only — lets the dashboard bypass Access JWT verification when running locally.
-# Set the same random string in dashboard/.dev.vars (or dashboard/.env).
+# Local dev only — lets the dashboard bypass Access JWT verification when running locally
+# via `npm run dev` (wrangler dev) from the repo root.
+# Set the same random string in dashboard/.env if running the Vite dev server separately.
 # NEVER add this to wrangler.jsonc vars or set it as a wrangler secret.
 DEV_BYPASS_SECRET=
