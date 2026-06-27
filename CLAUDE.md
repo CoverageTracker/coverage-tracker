@@ -8,7 +8,7 @@ A self-hostable, open-source (MIT) code-quality dashboard. **One instance per de
 
 ## Architecture invariants
 
-- **One Worker, one `wrangler.jsonc`.** Static assets (`assets.directory` → `dist/`) and API live in the same Worker. Do not reintroduce a separate Pages project or a second Worker for the API.
+- **One Worker, one `wrangler.json`.** Static assets (`assets.directory` → `dist/`) and API live in the same Worker. Do not reintroduce a separate Pages project or a second Worker for the API.
 - **Routing:** `assets.run_worker_first = ["/api/*"]` — only `/api/*` hits the Worker first; everything else is asset-first with `not_found_handling = "single-page-application"` (SPA deep links serve `index.html`).
 - **Single D1 database** (`DB` binding) holds all repos' data. Free-tier cap is **500 MB/database**; the real ceiling is the **write limit** (~100k rows/day), not bytes.
 - **Two coverage tables:**
@@ -30,8 +30,9 @@ A self-hostable, open-source (MIT) code-quality dashboard. **One instance per de
 ## Guardrails (do not violate)
 
 - **Never put a Cloudflare Access application on `/api/*`.** Machine callers (CI OIDC, webhooks, health) must reach the Worker unauthenticated at the edge. API auth is enforced in code. This is the single most important invariant.
-- **Never commit secrets.** Values are set with `wrangler secret put`. Code and `wrangler.jsonc` may reference names only: `GITHUB_OIDC_AUDIENCE`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `GITHUB_APP_*`.
-- **Don't hand-write the `Bindings`/`Env` type.** Run `wrangler types` after any `wrangler.jsonc` change.
+- **Never commit secrets.** Values are set with `wrangler secret put`. Code and `wrangler.json` may reference names only: `GITHUB_OIDC_AUDIENCE`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `GITHUB_APP_*`.
+- **Never set `DEV_BYPASS_SECRET` via `wrangler secret put`.** It exists only in `.dev.vars` for local dev. Setting it in production silently disables all Access JWT verification.
+- **Don't hand-write the `Bindings`/`Env` type.** Run `wrangler types` after any `wrangler.json` change.
 - **Don't use Workers Sites** (deprecated). Workers Static Assets only; requires Wrangler v4+.
 - **Don't make `coverage_daily` writes lossy on re-run.** All rollup writes are `ON CONFLICT … DO UPDATE`.
 - Don't widen retention or change rollup semantics without updating `RETENTION_DAYS` / the documented contract; both are single points of change.
@@ -39,14 +40,18 @@ A self-hostable, open-source (MIT) code-quality dashboard. **One instance per de
 ## Commands
 
 ```bash
-# Dev
-npm run dev                 # wrangler dev (local assets + Worker)
-wrangler types              # regenerate Bindings after config changes
+# Dev — uses the named `dev` environment (wrangler.json env.dev), which requires
+# DEV_BYPASS_SECRET to be set in .dev.vars to bypass Access JWT verification locally.
+npm run dev                 # wrangler dev --env dev (local assets + Worker)
+wrangler types              # regenerate Bindings after wrangler.json changes
 
-# Database
-wrangler d1 migrations apply coverage --local
-wrangler d1 migrations apply coverage --remote
-wrangler d1 execute coverage --local --command "SELECT ..."
+# Database (local)
+npm run db:migrate:local    # wrangler d1 migrations apply DB --local --env dev
+npm run db:seed:local       # load test/seed-local.sql into the local D1
+
+# Database (remote / production)
+wrangler d1 migrations apply DB --remote
+wrangler d1 execute DB --remote --command "SELECT ..."
 
 # Test (runs in the Workers runtime with real D1 bindings)
 npm test                    # @cloudflare/vitest-pool-workers
@@ -67,7 +72,17 @@ wrangler secret put <NAME>
 - **Auth failures:** missing credential → `401`, present-but-invalid → `403`.
 - **Logging:** structured `console.log`/`console.error`; observability is enabled — keep it that way.
 - **The Hono catch-all** `app.all('*', c => c.env.ASSETS.fetch(c.req.raw))` must remain the last route so non-API requests reaching the Worker fall through to assets.
-- **Tests:** confirm `nodejs_compat` is in `wrangler.jsonc` directly — the vitest pool injects it and can mask a missing flag that then fails at deploy.
+- **Tests:** confirm `nodejs_compat` is in `wrangler.json` directly — the vitest pool injects it and can mask a missing flag that then fails at deploy.
+
+## Local dev
+
+`wrangler dev --env dev` activates the `dev` named environment defined in `wrangler.json`. This environment overlays the top-level config and declares `DEV_BYPASS_SECRET` as a required secret. Set it to any non-empty value in `.dev.vars`:
+
+```
+DEV_BYPASS_SECRET=dev
+```
+
+`requireAccess()` checks `c.env.DEV_BYPASS_SECRET` first — if set, it skips all Access JWT verification. This is necessary because `wrangler dev` runs without a Cloudflare Access edge in front, so neither the `Cf-Access-Jwt-Assertion` header nor the `CF_Authorization` cookie are present. The bypass is entirely absent from the production environment (no `env.dev` overlay, no `.dev.vars`).
 
 ## Gotchas
 

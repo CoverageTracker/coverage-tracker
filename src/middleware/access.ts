@@ -35,19 +35,32 @@ async function fetchAccessJWKS(teamDomain: string, forceRefresh: boolean): Promi
 
 export function requireAccess() {
   return createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
-    // Local dev bypass — only active when DEV_BYPASS_SECRET is set (never in production)
-    const bypassSecret = c.env.DEV_BYPASS_SECRET;
-    if (bypassSecret && c.req.header('x-dev-bypass') === bypassSecret) {
+    const path = new URL(c.req.url).pathname;
+
+    // Local dev bypass — present in .dev.vars only; never set as a wrangler secret.
+    // Any non-empty value disables Access JWT verification for all requests.
+    if (c.env.DEV_BYPASS_SECRET) {
+      console.log({ event: 'access_bypass', path });
       return next();
     }
 
     // SPA browser fetches to /api/* arrive without the Cf-Access-Jwt-Assertion header
     // (Cloudflare Access only injects it at the edge for the dashboard routes).
     // The browser sends the CF_Authorization cookie on same-origin requests instead.
-    const assertion =
-      c.req.header('Cf-Access-Jwt-Assertion') ?? getCookie(c, 'CF_Authorization');
+    const assertionHeader = c.req.header('Cf-Access-Jwt-Assertion');
+    const assertionCookie = getCookie(c, 'CF_Authorization');
+    const assertion = assertionHeader ?? assertionCookie;
+
+    console.log({
+      event: 'access_check',
+      path,
+      hasAssertionHeader: !!assertionHeader,
+      hasAssertionCookie: !!assertionCookie,
+      hasDevBypass: !!c.env.DEV_BYPASS_SECRET,
+    });
 
     if (!assertion) {
+      console.error({ event: 'access_denied', reason: 'missing_token', path });
       return c.json({ error: 'Missing Access token' }, 401);
     }
 
@@ -56,10 +69,14 @@ export function requireAccess() {
     try {
       const header = decodeProtectedHeader(assertion);
       if (header.alg !== 'RS256') throw new Error(`Unexpected algorithm: ${header.alg}`);
+
+      console.log({ event: 'access_verify', path, kid: header.kid, alg: header.alg, teamDomain: CF_ACCESS_TEAM_DOMAIN });
+
       let jwks = await fetchAccessJWKS(CF_ACCESS_TEAM_DOMAIN, false);
       let jwk = jwks.keys.find((k) => k.kid === header.kid);
 
       if (!jwk) {
+        console.log({ event: 'access_jwks_refresh', path, kid: header.kid });
         jwks = await fetchAccessJWKS(CF_ACCESS_TEAM_DOMAIN, true);
         jwk = jwks.keys.find((k) => k.kid === header.kid);
       }
@@ -72,10 +89,13 @@ export function requireAccess() {
         audience: CF_ACCESS_AUD,
         algorithms: ['RS256'],
       });
-    } catch {
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error({ event: 'access_denied', reason: 'invalid_token', path, detail: reason });
       return c.json({ error: 'Invalid Access token' }, 403);
     }
 
+    console.log({ event: 'access_granted', path });
     await next();
   });
 }

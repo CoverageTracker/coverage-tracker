@@ -3,12 +3,14 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import TrendChart from '$lib/components/TrendChart.svelte';
+  import BadgeModal from '$lib/components/BadgeModal.svelte';
   import { theme } from '$lib/theme.svelte';
   import { METRICS } from '$lib/types';
 
   let { data } = $props();
 
   let branchInput = $state('');
+  let badgeModalOpen = $state(false);
 
   function updateParams(updates: Record<string, string>) {
     const params = new URLSearchParams($page.url.searchParams);
@@ -74,17 +76,27 @@
       {/each}
     </div>
 
-    <form class="branch-form" onsubmit={applyBranch}>
-      <label for="branch-input">Branch</label>
-      <input
-        id="branch-input"
-        type="text"
-        bind:value={branchInput}
-        placeholder={data.project.default_branch}
-        spellcheck={false}
-      />
-      <button type="submit">Go</button>
-    </form>
+    <div class="controls-right">
+      <form class="branch-form" onsubmit={applyBranch}>
+        <label for="branch-input">Branch</label>
+        <input
+          id="branch-input"
+          type="text"
+          bind:value={branchInput}
+          placeholder={data.project.default_branch}
+          spellcheck={false}
+        />
+        <button type="submit">Go</button>
+      </form>
+
+      <button
+        class="badge-btn"
+        onclick={() => (badgeModalOpen = true)}
+        aria-haspopup="dialog"
+      >
+        Create status badge
+      </button>
+    </div>
   </div>
 
   {#if data.trend.data.length === 0}
@@ -123,6 +135,16 @@
         textColor={theme.tokens.text}
       />
     </div>
+  {/if}
+
+  {#if badgeModalOpen}
+    <BadgeModal
+      owner={data.project.owner_login}
+      repo={data.project.repo_name}
+      projectId={data.project.id}
+      badgeEnabled={data.project.badge_enabled}
+      onclose={() => (badgeModalOpen = false)}
+    />
   {/if}
 </div>
 
@@ -214,6 +236,32 @@
 
   .metric-tabs button:not(.active):hover {
     color: var(--text);
+  }
+
+  .controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .badge-btn {
+    height: 33px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 3px);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .badge-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
   }
 
   /* Branch form */
