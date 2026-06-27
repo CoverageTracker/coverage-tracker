@@ -48,19 +48,19 @@ jobs:
         working-directory: dashboard
         run: npm ci
 
-      - name: Inject Database ID into wrangler.jsonc
+      - name: Inject Database ID into wrangler.json
         env:
           DB_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
         run: |
           # Use jq to update the database_id inside the d1_databases array
-          npx strip-json-comments-cli wrangler.jsonc | jq '.d1_databases[0].database_id = env.DB_ID' > wrangler.json.tmp
+          jq '.env.prod.d1_databases[0].database_id = env.DB_ID' > wrangler.json.tmp
           
           # Replace the old file with the newly updated one
-          mv wrangler.json.tmp wrangler.jsonc
+          mv wrangler.json.tmp wrangler.json
 
       - name: Deploy Worker + assets
         if: github.ref == 'refs/heads/main'
-        run: npx wrangler deploy
+        run: npx wrangler deploy --env prod
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
