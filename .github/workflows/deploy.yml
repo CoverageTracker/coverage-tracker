@@ -60,6 +60,22 @@ jobs:
           # Replace the old file with the newly updated one
           mv wrangler.json.tmp wrangler.json
 
+      - name: Set up secrets
+        env:
+          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
+          GITHUB_APP_CLIENT_ID: ${{ secrets.GITHUB_APP_CLIENT_ID }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          GITHUB_WEBHOOK_SECRET: ${{ secrets.GITHUB_WEBHOOK_SECRET }}
+          CF_ACCESS_AUD: ${{ secrets.CF_ACCESS_AUD }}
+          CF_ACCESS_TEAM_DOMAIN: ${{ secrets.CF_ACCESS_TEAM_DOMAIN }}
+        run: |
+          echo "$GITHUB_APP_ID" | npx wrangler secret put GITHUB_APP_ID --env "$TARGET_ENV"
+          echo "$GITHUB_APP_CLIENT_ID" | npx wrangler secret put GITHUB_APP_CLIENT_ID --env "$TARGET_ENV"
+          echo "$GITHUB_APP_PRIVATE_KEY" | npx wrangler secret put GITHUB_APP_PRIVATE_KEY --env "$TARGET_ENV"
+          echo "$GITHUB_WEBHOOK_SECRET" | npx wrangler secret put GITHUB_WEBHOOK_SECRET --env "$TARGET_ENV"
+          echo "$CF_ACCESS_AUD" | npx wrangler secret put CF_ACCESS_AUD --env "$TARGET_ENV"
+          echo "$CF_ACCESS_TEAM_DOMAIN" | npx wrangler secret put CF_ACCESS_TEAM_DOMAIN --env "$TARGET_ENV"
+
       - name: Deploy Worker + assets
         run: npx wrangler deploy --env "$TARGET_ENV"
         env:
