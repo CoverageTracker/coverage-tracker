@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev --env dev",
-    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy --env production",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply DB --local --env dev",
     "db:seed:local": "wrangler d1 execute DB --local --file test/seed-local.sql --env dev",
-    "db:migrate:remote": "wrangler d1 migrations apply DB --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote --env production"
   },
   "dependencies": {
     "hono": "^4.6.0",
