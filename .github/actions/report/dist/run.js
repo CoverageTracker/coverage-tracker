@@ -24726,6 +24726,18 @@ async function run() {
     }
   }
   let oidcToken;
+  if (!process.env.ACTIONS_ID_TOKEN_REQUEST_URL) {
+    if (isPR) {
+      warning(
+        "OIDC token unavailable (ACTIONS_ID_TOKEN_REQUEST_URL not set). For fork pull requests this is a GitHub platform restriction. For non-fork workflows, add `id-token: write` to the job permissions. Skipping report."
+      );
+    } else {
+      setFailed(
+        "OIDC token unavailable (ACTIONS_ID_TOKEN_REQUEST_URL not set). Add `id-token: write` to the job permissions block."
+      );
+    }
+    return;
+  }
   try {
     oidcToken = await getIDToken("coverage-tracker");
   } catch (err) {

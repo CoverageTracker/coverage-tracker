@@ -79,10 +79,27 @@ export async function run(): Promise<void> {
 
   // Mint OIDC token with the fixed audience expected by the Worker (Appendix B.1)
   let oidcToken: string;
+  if (!process.env.ACTIONS_ID_TOKEN_REQUEST_URL) {
+    // ACTIONS_ID_TOKEN_REQUEST_URL is only set when id-token: write is granted.
+    // Fork pull_requests are silently denied this permission by GitHub; non-fork
+    // workflows simply need to add the permission to the job block.
+    if (isPR) {
+      core.warning(
+        'OIDC token unavailable (ACTIONS_ID_TOKEN_REQUEST_URL not set). ' +
+          'For fork pull requests this is a GitHub platform restriction. ' +
+          'For non-fork workflows, add `id-token: write` to the job permissions. Skipping report.',
+      );
+    } else {
+      core.setFailed(
+        'OIDC token unavailable (ACTIONS_ID_TOKEN_REQUEST_URL not set). ' +
+          'Add `id-token: write` to the job permissions block.',
+      );
+    }
+    return;
+  }
   try {
     oidcToken = await core.getIDToken('coverage-tracker');
   } catch (err) {
-    // Fork PRs cannot mint OIDC tokens — degrade gracefully (Appendix B.3)
     core.warning(
       `Could not mint OIDC token (${err}). ` +
         'This is expected for fork pull requests. Skipping report.',
