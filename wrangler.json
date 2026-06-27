@@ -11,10 +11,6 @@
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*"]
 	},
-	// Explicit build command suppresses wrangler's Hono framework auto-detection.
-	// Hono here is the Worker router, not a front-end framework; the SvelteKit SPA
-	// is built separately. Dashboard node_modules must already be installed before
-	// wrangler deploy runs (handled by CI's "Install dashboard dependencies" step).
 	"build": {
 		"command": "npm --prefix dashboard run build"
 	},
@@ -36,13 +32,21 @@
 			"CF_ACCESS_AUD",
 			"CF_ACCESS_TEAM_DOMAIN"
 		]
+	},
+	"env": {
+		"dev": {
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "coverage",
+					"migrations_dir": "migrations"
+				}
+			],
+			"secrets": {
+				"required": [
+					"DEV_BYPASS_SECRET"
+				],
+			}
+		}
 	}
-	// Secrets (set with `wrangler secret put <NAME>`):
-	//   GITHUB_APP_ID
-	//   GITHUB_APP_CLIENT_ID
-	//   GITHUB_APP_PRIVATE_KEY   — PKCS#8 PEM, see .dev.vars.example
-	//   GITHUB_WEBHOOK_SECRET
-	//   CF_ACCESS_AUD            — Access application AUD tag
-	//   CF_ACCESS_TEAM_DOMAIN    — e.g. myteam.cloudflareaccess.com
-	//   DEV_BYPASS_SECRET        — local dev only, never set in production
 }
