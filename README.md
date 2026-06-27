@@ -4,7 +4,11 @@
 
 A self-hosted dashboard that tracks code coverage, cyclomatic complexity, and code duplication across your GitHub repositories — with trend charts, per-PR diff checks, and README badges.
 
-Runs entirely on your own Cloudflare account (Worker + D1 + Pages). Your data stays in your own database. No SaaS, no subscriptions, no third-party access to your metrics.
+Runs entirely on your own Cloudflare account (Worker + D1). Your data stays in your own database. No SaaS, no subscriptions, no third-party access to your metrics.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ZeroStash/coverage-tracker)
+
+> **Note:** The button deploys the Worker and provisions the D1 database automatically. You still need to complete the GitHub App, Cloudflare Zero Trust, and secrets setup described in [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ---
 
@@ -12,7 +16,7 @@ Runs entirely on your own Cloudflare account (Worker + D1 + Pages). Your data st
 
 1. **Install the GitHub App** on the repos you want to track. The Worker registers them automatically via webhook.
 2. **Add a workflow step** to your CI that runs the reporting Action after your test suite. It collects coverage/complexity/duplication numbers and pushes them to the Worker using a GitHub Actions OIDC token — no static secrets.
-3. **View trends** in the Cloudflare Pages dashboard, protected by Cloudflare Access so only you can see it.
+3. **View trends** in the dashboard (served as static assets by the Worker), protected by Cloudflare Access so only you can see it.
 4. Optionally **embed a badge** in your README.
 
 ```
@@ -211,7 +215,7 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 |-------|-------------|--------|
 | 1–6 | Core Worker, webhooks, dashboard, reporting Action | Complete |
 | — | Convergence refactor (single Worker + static assets) | Complete |
-| 7 | "Deploy to Cloudflare" button | Planned |
+| 7 | "Deploy to Cloudflare" button | In progress |
 | 8 | Docs, OSS hygiene, public release | In progress |
 
 ---

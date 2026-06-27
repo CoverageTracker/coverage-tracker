@@ -43,34 +43,30 @@ npm install
 
 ## 3. Create the D1 database
 
-First, copy the example config to create your local `wrangler.jsonc` (it is gitignored and holds your personal values):
-
-```bash
-cp wrangler.example.jsonc wrangler.jsonc
-```
-
-Then create the database:
+`wrangler.jsonc` is already present in the repo. Create your D1 database:
 
 ```bash
 npx wrangler d1 create coverage
 ```
 
-Copy the `database_id` from the output and paste it into `wrangler.jsonc`:
+Copy the `database_id` from the output and add it to the `d1_databases` entry in `wrangler.jsonc`:
 
 ```jsonc
 "d1_databases": [
   {
     "binding": "DB",
     "database_name": "coverage",
-    "database_id": "YOUR_DATABASE_ID_HERE",   // ← paste here
+    "database_id": "paste-your-id-here",   // ← add this line
     "migrations_dir": "migrations"
   }
 ]
 ```
 
-Also update the `assets.directory` if you need to change where the SvelteKit build lands (the default `./dashboard/build` is correct for this repo), and verify the `run_worker_first` setting remains `["/api/*"]` so all non-API requests fall through to the SPA assets.
-
-> **Note:** There is no `WORKER_URL` var or `routes` entry in the new config. The custom domain is attached to the Worker directly in the Cloudflare dashboard after first deploy (see Step 11), and the Worker URL is not referenced in Worker code.
+> **Note:** The committed `wrangler.jsonc` intentionally omits `database_id` so that the
+> [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/ZeroStash/coverage-tracker)
+> button can provision D1 automatically. For manual installs, add the field as shown above.
+> The custom domain is attached in the Cloudflare dashboard after first deploy (Step 11) —
+> no `routes` entry is needed.
 
 ---
 
@@ -224,21 +220,19 @@ Zero Trust → **Access → Applications → Add an application → Self-hosted*
 | Session duration | Your preference (e.g. 24 hours) |
 | Identity providers | GitHub (the one added in Step 9) |
 
-**Application domain — protect the dashboard only:**
+You will create **two** Access applications for the same hostname — one that protects the dashboard and one that lets machine callers reach the API without going through the OAuth flow.
 
-| Domain | Path |
-|--------|------|
-| `coverage-tracker.yourdomain.com` | *(leave blank — protects the whole domain)* |
+### Application 1 — Dashboard (Allow)
 
-> **Critical:** Do **not** add `/api` or `/admin` as protected paths. All `/api/*` routes
-> enforce their own auth in code: OIDC for CI ingest, HMAC for webhooks, and Access JWT
-> middleware for `/api/projects/*` and `/api/admin/*`. Adding a Cloudflare Access edge policy
-> on `/api/*` would block the GitHub Actions runner (OIDC ingest) and GitHub webhook
-> deliveries — both are non-browser clients that cannot complete the Access flow.
->
-> The dashboard SPA (served from the root and any non-`/api` path) is what Access should
-> protect. Because `/api/*` bypasses edge Access by design, the Worker verifies the Access
-> JWT in middleware for all routes that require login (`requireAccess()`).
+This application protects the SvelteKit dashboard. When a user visits the dashboard, Cloudflare redirects them through GitHub login and sets a `CF_Authorization` session cookie. The Worker reads this cookie to verify identity on subsequent browser API calls.
+
+| Field | Value |
+|-------|-------|
+| App name | `coverage-tracker` |
+| Application domain | `coverage-tracker.yourdomain.com` |
+| Path | *(leave blank — protects the entire hostname)* |
+| Session duration | Your preference (e.g. 24 hours) |
+| Identity providers | GitHub (the one added in Step 9) |
 
 Add a policy:
 - **Policy name:** Allow deployer
@@ -246,6 +240,28 @@ Add a policy:
 - **Rule:** Emails → `your-email@example.com`
 
 After saving, open the application settings and copy the **Application Audience (AUD) Tag** — this is your `CF_ACCESS_AUD`.
+
+### Application 2 — API Bypass
+
+The CI runner (OIDC), GitHub webhooks (HMAC), health checks, and public badge endpoints are machine callers that cannot complete the browser OAuth flow. Create a second application that bypasses Access for all `/api` paths. Because the bypass application is more specific than the root application, Cloudflare applies it to all requests under `/api` while the root application continues to protect the dashboard.
+
+| Field | Value |
+|-------|-------|
+| App name | `coverage-tracker-api` |
+| Application domain | `coverage-tracker.yourdomain.com` |
+| Path | `/api` |
+| Identity providers | *(none required)* |
+
+Add a policy:
+- **Policy name:** Bypass machine callers
+- **Action:** Bypass
+- **Rule:** Everyone
+
+> The Worker enforces its own auth in code for every `/api/*` route: GitHub Actions OIDC for
+> `/api/ci/coverage` and `/api/baseline/*`, HMAC for `/api/webhooks/github`, and
+> Cloudflare Access JWT (from the session cookie) for `/api/projects/*` and `/api/admin/*`.
+> No `/api/*` route is unprotected — the bypass only removes the edge OAuth redirect so
+> non-browser clients can reach the Worker.
 
 Now go back and set the two Access secrets if you haven't already:
 
@@ -259,7 +275,7 @@ npx wrangler secret put CF_ACCESS_AUD
 ## 11. Deploy the Worker
 
 ```bash
-npx wrangler deploy
+npm run deploy
 ```
 
 Expected output:
@@ -269,22 +285,23 @@ Deployed coverage-tracker triggers
   coverage-tracker.yourdomain.com (custom domain)
 ```
 
-> **Note:** The first deploy also runs `npm --prefix dashboard run build` to compile the
-> SvelteKit dashboard before uploading. Make sure dashboard dependencies are installed
-> (`npm --prefix dashboard install`) before running this step.
+> **Note:** `npm run deploy` applies any pending D1 migrations and then compiles the SvelteKit
+> dashboard (via the `build.command` in `wrangler.jsonc`) before uploading. Make sure
+> dashboard dependencies are installed (`npm --prefix dashboard install`) before running
+> this step.
 
-### Add WAF skip rules
+### Add WAF skip rules (if Bot Fight Mode is enabled)
 
-If you enable **Bot Fight Mode** or **Browser Integrity Check** on your Cloudflare zone, those security features will block the GitHub Actions runner (a non-browser client) from reaching `/api/ci/coverage` and `/api/webhooks/github`. Both endpoints have their own auth (OIDC and HMAC respectively), so they don't need zone-level bot protection.
+**This is separate from the Access Bypass application you created in Step 10.** The Access Bypass app removes the OAuth redirect for machine callers. Bot Fight Mode is a zone-level WAF feature that blocks non-browser HTTP clients entirely — it fires before Access and cannot be bypassed by Access policy alone.
 
-Run the provided setup script to add a WAF skip rule for those paths:
+If you have **Bot Fight Mode** or **Browser Integrity Check** enabled on your Cloudflare zone, run the provided script to add a WAF skip rule for `/api/ci/coverage` and `/api/webhooks/github`:
 
 ```bash
 CLOUDFLARE_API_TOKEN=<your-token> ZONE_DOMAIN=yourdomain.com \
   node scripts/setup-waf-rules.mjs
 ```
 
-The script is idempotent — safe to re-run. It requires a token with **Zone → WAF → Edit** permission.
+The script is idempotent — safe to re-run. It requires a token with **Zone → WAF → Edit** permission. If Bot Fight Mode is off, skip this step.
 
 ---
 
