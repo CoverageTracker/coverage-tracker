@@ -6,9 +6,25 @@ A self-hosted dashboard that tracks code coverage, cyclomatic complexity, and co
 
 Runs entirely on your own Cloudflare account (Worker + D1). Your data stays in your own database. No SaaS, no subscriptions, no third-party access to your metrics.
 
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/1-catppuccin.png" alt="Catppuccin theme"><br><sub>Catppuccin</sub></td>
+    <td align="center"><img src="screenshots/2-gruvbox.png" alt="Gruvbox theme"><br><sub>Gruvbox</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/3-nord.png" alt="Nord theme"><br><sub>Nord</sub></td>
+    <td align="center"><img src="screenshots/4-solarized.png" alt="Solarized theme"><br><sub>Solarized</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/5-dracula.png" alt="Dracula theme"><br><sub>Dracula</sub></td>
+    <td align="center"><img src="screenshots/6-tokyo-night.png" alt="Tokyo Night theme"><br><sub>Tokyo Night</sub></td>
+  </tr>
+</table>
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ZeroStash/coverage-tracker)
 
-> **Note:** The button deploys the Worker and provisions the D1 database automatically. You still need to complete the GitHub App, Cloudflare Zero Trust, and secrets setup described in [docs/INSTALLATION.md](docs/INSTALLATION.md).
+> [!NOTE]
+> The button deploys the Worker and provisions the D1 database automatically. You still need to complete the GitHub App, Cloudflare Zero Trust, and secrets setup described in [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ---
 
