@@ -52,8 +52,8 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 - [x] Worker deployed to `coverage-tracker.zerostash.org`
 - [x] All `wrangler secret`s configured: `GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_AUD`, `CF_ACCESS_TEAM_DOMAIN`
 - [x] GitHub App created, installed on ZeroStash org (7 repos registered)
-- [x] Cloudflare Access application protecting `/api` and `/admin` paths only
-- [x] `scripts/setup-waf-rules.mjs` — Node.js script (no external deps) to add WAF skip rule bypassing Browser Integrity Check for `/ingest` and `/webhooks/github`; idempotent, documented in INSTALLATION.md step 11
+- [x] Cloudflare Access: Allow application on root domain + Bypass application on `/api` (machine callers bypass edge Access; in-code auth handles all `/api/*` routes)
+- [x] `scripts/setup-waf-rules.mjs` — Node.js script (no external deps) to add WAF skip rule bypassing Browser Integrity Check for `/api/ci/coverage` and `/api/webhooks/github`; idempotent, documented in INSTALLATION.md step 11 (only needed if Bot Fight Mode is enabled)
 
 ---
 
@@ -161,7 +161,7 @@ Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a
 - [x] All routes moved under `/api/*`; SPA served via `ASSETS` catch-all
 - [x] `coverage_runs` (14-day retention) + `coverage_daily` (permanent) tables — `migrations/0002_coverage.sql`
 - [x] Daily rollup cron (`30 6 * * *`) — `src/db/rollup.ts` → last-of-day snapshot + prune
-- [x] Cloudflare Access scoped to dashboard paths only; `/api/*` auth enforced in code
+- [x] Cloudflare Access: Allow app on root domain + Bypass app on `/api`; in-code auth enforced for all `/api/*` routes
 - [x] Stack: Hono + jose + zod; `nodejs_compat` compatibility flag
 - [x] `src/lib/metrics.ts` — metric name → D1 column mapping
 - [x] `src/routes/ci.ts` → `POST /api/ci/coverage` (typed columns, not EAV)
@@ -169,11 +169,12 @@ Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a
 
 ---
 
-## Phase 7 — "Deploy to Cloudflare" button ⬜ Not started
+## Phase 7 — "Deploy to Cloudflare" button 🔶 In progress
 
-- [ ] `deploy` npm script that includes `wrangler d1 migrations apply` so D1 is provisioned on first deploy
-- [ ] Button in README pointing at Cloudflare Workers deploy flow
-- [ ] Validate that the deploy flow handles the D1 binding name (not DB name) correctly
+- [x] `deploy` npm script runs `wrangler d1 migrations apply DB --remote` before `wrangler deploy` — uses binding name (`DB`) not database name so the deploy flow works when users specify a different database name
+- [x] `wrangler.jsonc` committed without `database_id` — Cloudflare's deploy flow provisions D1 automatically and fills in the ID
+- [x] Button added to `README.md`
+- [ ] Validate end-to-end via the deploy button flow (fork the repo, click button, confirm D1 is provisioned and migrations apply)
 
 ---
 
