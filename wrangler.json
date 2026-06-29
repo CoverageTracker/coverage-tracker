@@ -31,7 +31,7 @@
 		]
 	},
 	"build": {
-		"command": "npm --prefix dashboard run build"
+		"command": "npm --prefix dashboard clean-install && npm --prefix dashboard run build"
 	},
 	"env": {
 		"dev": {
