@@ -32,21 +32,5 @@
 	},
 	"build": {
 		"command": "npm --prefix dashboard run build"
-	},
-	"env": {
-		"dev": {
-			"d1_databases": [
-				{
-					"binding": "DB",
-					"database_name": "coverage",
-					"migrations_dir": "migrations"
-				}
-			],
-			"secrets": {
-				"required": [
-					"DEV_BYPASS_SECRET"
-				]
-			}
-		},
 	}
 }
