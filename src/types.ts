@@ -10,8 +10,8 @@ export interface Bindings {
   CF_ACCESS_AUD: string;
   /** e.g. myteam.cloudflareaccess.com */
   CF_ACCESS_TEAM_DOMAIN: string;
-  /** Local dev only (.dev.vars). Any non-empty value bypasses Access JWT verification. Never set as a wrangler secret. */
-  DEV_BYPASS_SECRET?: string;
+  /** Set to "development" in the wrangler.json env.dev vars block to bypass Access JWT verification locally. */
+  ENVIRONMENT?: string;
 }
 
 export interface Variables {

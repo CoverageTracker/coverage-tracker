@@ -30,9 +30,10 @@ jobs:
       - name: Test collect.sh parsers
         run: bash test/collect-parsers.sh
 
-      - uses: ./.github/actions/report
-        with:
-          worker-url: https://coverage-tracker.zerostash.org
-          min-coverage: '20'
-          max-coverage-drop: '5'
-          coverage-report-js: .github/actions/report/coverage/coverage-summary.json
+      # Disabled until a Coverage Tracker instance is running at demo.coveragetracker.dev.
+      # - uses: ./.github/actions/report
+      #   with:
+      #     worker-url: https://demo.coveragetracker.dev
+      #     min-coverage: '20'
+      #     max-coverage-drop: '5'
+      #     coverage-report-js: .github/actions/report/coverage/coverage-summary.json

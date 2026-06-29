@@ -1,6 +1,6 @@
 # coverage-tracker
 
-![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fcoverage-tracker.zerostash.org%2Fapi%2Fbadge%2FZeroStash%2Fcoverage-tracker%2Fcoverage.json)
+![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fdemo.coveragetracker.dev%2Fapi%2Fbadge%2FCoverageTracker%2Fcoverage-tracker%2Fcoverage.json)
 
 A self-hosted dashboard that tracks code coverage, cyclomatic complexity, and code duplication across your GitHub repositories — with trend charts, per-PR diff checks, and README badges.
 
@@ -21,7 +21,7 @@ Runs entirely on your own Cloudflare account (Worker + D1). Your data stays in y
   </tr>
 </table>
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ZeroStash/coverage-tracker)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CoverageTracker/coverage-tracker)
 
 > [!NOTE]
 > The button deploys the Worker and provisions the D1 database automatically. You still need to complete the GitHub App, Cloudflare Zero Trust, and secrets setup described in [docs/INSTALLATION.md](docs/INSTALLATION.md).
@@ -160,7 +160,7 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/api/admin/projects/1/badge
 │   ├── INSTALLATION.md   # Setup guide
 │   ├── PROGRESS.md       # Phase implementation status
 │   └── plans/            # Design documents
-├── wrangler.example.jsonc  # Config template — copy to wrangler.jsonc and fill in
+├── wrangler.example.jsonc  # Config template — copy to wrangler.json and fill in
 └── .dev.vars.example       # Local secrets template — copy to .dev.vars and fill in
 ```
 
@@ -202,7 +202,7 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/api/admin/projects/1/badge
 ```bash
 npm install
 npm --prefix dashboard install             # install dashboard dependencies
-cp wrangler.example.jsonc wrangler.jsonc   # fill in your D1 database ID
+cp wrangler.example.jsonc wrangler.json   # fill in your D1 database ID
 cp .dev.vars.example .dev.vars             # fill in local secrets
 npm run db:migrate:local                   # apply schema to local D1
 npm run dev                                # start Worker + SPA (builds dashboard first)

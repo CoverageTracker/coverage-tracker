@@ -68,24 +68,21 @@ describe('routing', () => {
     });
 
     it('GET /api/projects/:owner/:repo/metrics returns 400 for branch longer than 255 chars', async () => {
-      // DEV_BYPASS_SECRET is a local-dev-only secret not declared in wrangler.jsonc, so the
-      // test pool doesn't expose it as a binding. Inject a value directly into the env object
-      // so the bypass check in access.ts sees the same value as the request header.
-      const bypass = 'test-bypass-only';
-      (testEnv as Record<string, unknown>).DEV_BYPASS_SECRET = bypass;
+      // ENVIRONMENT is declared as a var in wrangler.json env.dev, but the test pool uses
+      // the top-level config so it isn't exposed as a binding. Inject it directly so the
+      // bypass check in access.ts treats this as a local dev request.
+      (testEnv as Record<string, unknown>).ENVIRONMENT = 'development';
       try {
         const longBranch = 'a'.repeat(256);
         const res = await worker.fetch(
-          new Request(`http://localhost/api/projects/testorg/repo/metrics?branch=${longBranch}`, {
-            headers: { 'x-dev-bypass': bypass },
-          }),
+          new Request(`http://localhost/api/projects/testorg/repo/metrics?branch=${longBranch}`),
           testEnv as never,
         );
         expect(res.status).toBe(400);
         const body = await res.json() as { error: string };
         expect(body.error).toBe('Invalid branch');
       } finally {
-        delete (testEnv as Record<string, unknown>).DEV_BYPASS_SECRET;
+        delete (testEnv as Record<string, unknown>).ENVIRONMENT;
       }
     });
   });

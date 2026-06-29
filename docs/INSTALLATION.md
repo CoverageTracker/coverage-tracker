@@ -43,13 +43,13 @@ npm install
 
 ## 3. Create the D1 database
 
-`wrangler.jsonc` is already present in the repo. Create your D1 database:
+`wrangler.json` is already present in the repo. Create your D1 database:
 
 ```bash
 npx wrangler d1 create coverage
 ```
 
-Copy the `database_id` from the output and add it to the `d1_databases` entry in `wrangler.jsonc`:
+Copy the `database_id` from the output and add it to the `d1_databases` entry in `wrangler.json`:
 
 ```jsonc
 "d1_databases": [
@@ -62,8 +62,8 @@ Copy the `database_id` from the output and add it to the `d1_databases` entry in
 ]
 ```
 
-> **Note:** The committed `wrangler.jsonc` intentionally omits `database_id` so that the
-> [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/ZeroStash/coverage-tracker)
+> **Note:** The committed `wrangler.json` intentionally omits `database_id` so that the
+> [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/CoverageTracker/coverage-tracker)
 > button can provision D1 automatically. For manual installs, add the field as shown above.
 > The custom domain is attached in the Cloudflare dashboard after first deploy (Step 11) —
 > no `routes` entry is needed.
@@ -286,7 +286,7 @@ Deployed coverage-tracker triggers
 ```
 
 > **Note:** `npm run deploy` applies any pending D1 migrations and then compiles the SvelteKit
-> dashboard (via the `build.command` in `wrangler.jsonc`) before uploading. Make sure
+> dashboard (via the `build.command` in `wrangler.json`) before uploading. Make sure
 > dashboard dependencies are installed (`npm --prefix dashboard install`) before running
 > this step.
 
@@ -387,13 +387,13 @@ If both tables have rows, the installation is complete and the Worker is ready t
 
 ## 14. Dashboard
 
-The SvelteKit dashboard in `dashboard/` is compiled by `wrangler deploy` automatically (via the `build.command` in `wrangler.jsonc`) and served as static assets by the same Worker. There is no separate Cloudflare Pages project.
+The SvelteKit dashboard in `dashboard/` is compiled by `wrangler deploy` automatically (via the `build.command` in `wrangler.json`) and served as static assets by the same Worker. There is no separate Cloudflare Pages project.
 
 **After first deploy**, navigate to `https://coverage-tracker.yourdomain.com` — Cloudflare Access will prompt you to log in with the identity provider you configured in Step 9. Once authenticated, the dashboard loads and shows all registered repos.
 
 If the dashboard returns a blank page or 404, check:
 - The SvelteKit build completed without errors (`npm --prefix dashboard run build` locally)
-- The `assets.directory` in `wrangler.jsonc` points to `./dashboard/build`
+- The `assets.directory` in `wrangler.json` points to `./dashboard/build`
 - The `run_worker_first: ["/api/*"]` setting is present (so non-API paths serve the SPA)
 
 The dashboard is served from the same domain and behind the same Cloudflare Access application you created in Step 10. No separate Pages project or additional Access app is needed.

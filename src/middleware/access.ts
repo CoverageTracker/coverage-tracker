@@ -37,9 +37,9 @@ export function requireAccess() {
   return createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
     const path = new URL(c.req.url).pathname;
 
-    // Local dev bypass — present in .dev.vars only; never set as a wrangler secret.
-    // Any non-empty value disables Access JWT verification for all requests.
-    if (c.env.DEV_BYPASS_SECRET) {
+    // Local dev bypass — ENVIRONMENT is set to "development" via env.dev vars in wrangler.json.
+    // Never present in production (the env.dev overlay is not applied on wrangler deploy).
+    if (c.env.ENVIRONMENT === 'development') {
       console.log({ event: 'access_bypass', path });
       return next();
     }
@@ -56,7 +56,6 @@ export function requireAccess() {
       path,
       hasAssertionHeader: !!assertionHeader,
       hasAssertionCookie: !!assertionCookie,
-      hasDevBypass: !!c.env.DEV_BYPASS_SECRET,
     });
 
     if (!assertion) {

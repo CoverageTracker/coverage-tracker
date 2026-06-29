@@ -32,5 +32,12 @@
 	},
 	"build": {
 		"command": "npm --prefix dashboard run build"
+	},
+	"env": {
+		"dev": {
+			"vars": {
+				"ENVIRONMENT": "development"
+			}
+		}
 	}
 }

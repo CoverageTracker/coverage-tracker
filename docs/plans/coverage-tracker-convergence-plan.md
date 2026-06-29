@@ -1,7 +1,7 @@
 # coverage-tracker — Convergence Refactor Plan
 
 **Audience:** Claude Code CLI
-**Goal:** Collapse the current Cloudflare Pages site + separate Worker(s) into a **single Worker serving static assets and API routes** from one apex domain, with one `wrangler.jsonc`, path-scoped Cloudflare Access, three-tier API auth, and a D1 raw-runs + daily-rollup model with a cron-driven prune.
+**Goal:** Collapse the current Cloudflare Pages site + separate Worker(s) into a **single Worker serving static assets and API routes** from one apex domain, with one `wrangler.json`, path-scoped Cloudflare Access, three-tier API auth, and a D1 raw-runs + daily-rollup model with a cron-driven prune.
 
 ---
 
@@ -17,7 +17,7 @@ Serve the dashboard SPA and the API from the **same apex domain** out of **one W
 |---|---|---|
 | Frontend hosting | Cloudflare Pages project on apex | Static assets served by the Worker (`assets.directory`) |
 | API hosting | Separate Worker(s) / Pages Functions | Same Worker, `/api/*` routed via `run_worker_first` |
-| Config files | Pages config + Worker `wrangler.*` | Single `wrangler.jsonc` |
+| Config files | Pages config + Worker `wrangler.*` | Single `wrangler.json` |
 | Domain routing | Pages custom domain + Worker route precedence | One Worker custom domain on the apex |
 | Dashboard auth | Cloudflare Access (scoped apps already in place) | Cloudflare Access scoped to dashboard paths only |
 | API auth | per-Worker | In-code: OIDC (CI), HMAC (webhooks), none (health) |
@@ -44,7 +44,7 @@ Serve the dashboard SPA and the API from the **same apex domain** out of **one W
 
 These touch the Cloudflare dashboard, DNS, secrets, or GitHub config and **cannot be done from the repo**. Claude Code should treat these as preconditions/post-conditions and **not** attempt them. Flag clearly in the cutover phase.
 
-1. **Secrets** (set via `wrangler secret put`, see §8). Claude Code may write the *names* into `wrangler.jsonc`/types but must never commit values.
+1. **Secrets** (set via `wrangler secret put`, see §8). Claude Code may write the *names* into `wrangler.json`/types but must never commit values.
 2. **Cloudflare Access apps**: after cutover, scope Access application(s) to the dashboard paths on the apex (e.g. `/`, `/dashboard*`), and ensure **no Access app covers `/api/*`** — machine callers (OIDC CI, webhooks, public health) must reach the Worker unauthenticated at the edge. This is the same scoped-app pattern already adopted; re-verify it against the new single-origin path layout.
 3. **Custom domain cutover**: detach the apex from the Pages project, attach it to the Worker (Workers custom domain). Brief downtime window — sequence per §7 Phase 9.
 4. **GitHub App / OAuth App**: webhook secret + (if dashboard login uses GitHub OAuth via Access) the OAuth app credentials. Existing config from the locked architecture; verify callback URLs still resolve on the converged origin.
@@ -55,7 +55,7 @@ These touch the Cloudflare dashboard, DNS, secrets, or GitHub config and **canno
 
 ```
 .
-├── wrangler.jsonc
+├── wrangler.json
 ├── package.json
 ├── tsconfig.json
 ├── migrations/
@@ -87,7 +87,7 @@ These touch the Cloudflare dashboard, DNS, secrets, or GitHub config and **canno
 
 ---
 
-## 6. Configuration contract — `wrangler.jsonc`
+## 6. Configuration contract — `wrangler.json`
 
 ```jsonc
 {
@@ -167,7 +167,7 @@ Each phase is independently committable with its own acceptance check. Do them i
 
 ### Phase 7 — Tests
 - Use `@cloudflare/vitest-pool-workers` so tests run in the Workers runtime with real D1 bindings.
-- Confirm `nodejs_compat` is present in `wrangler.jsonc` (the pool injects it for tests, masking a missing flag at deploy — verify explicitly).
+- Confirm `nodejs_compat` is present in `wrangler.json` (the pool injects it for tests, masking a missing flag at deploy — verify explicitly).
 - **Accept:** `npm test` green; coverage of auth, ingest, rollup, routing.
 
 ### Phase 8 — CI ingest workflow

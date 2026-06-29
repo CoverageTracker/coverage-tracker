@@ -31,7 +31,7 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 ### Security
 - [x] All D1 queries use `.prepare().bind()` — no string interpolation (A10)
 - [x] `.dev.vars` gitignored; `.dev.vars.example` committed as template (A9)
-- [x] `wrangler.jsonc` gitignored; `wrangler.example.jsonc` committed as template
+- [x] `wrangler.json` gitignored; `wrangler.example.jsonc` committed as template
 
 ---
 
@@ -49,9 +49,9 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 - [x] `PATCH /admin/projects/:id/badge` — Access-gated, toggles `badge_enabled`
 
 ### Deployment (live)
-- [x] Worker deployed to `coverage-tracker.zerostash.org`
+- [x] Worker deployed to `demo.coveragetracker.dev`
 - [x] All `wrangler secret`s configured: `GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_AUD`, `CF_ACCESS_TEAM_DOMAIN`
-- [x] GitHub App created, installed on ZeroStash org (7 repos registered)
+- [x] GitHub App created, installed on CoverageTracker org (7 repos registered)
 - [x] Cloudflare Access: Allow application on root domain + Bypass application on `/api` (machine callers bypass edge Access; in-code auth handles all `/api/*` routes)
 - [x] `scripts/setup-waf-rules.mjs` — Node.js script (no external deps) to add WAF skip rule bypassing Browser Integrity Check for `/api/ci/coverage` and `/api/webhooks/github`; idempotent, documented in INSTALLATION.md step 11 (only needed if Bot Fight Mode is enabled)
 
@@ -70,13 +70,13 @@ Implemented as part of the Phase 6 Action (the two are tightly coupled). E2E ver
 
 ## Phase 5 — Svelte dashboard ✅ Complete (integrated into Worker — see Convergence Refactor)
 
-Dashboard built in `dashboard/` (SvelteKit 5). Builds to `dashboard/build/` and is served by the Worker via Workers Static Assets. All API calls are server-side; local dev uses `DEV_BYPASS_SECRET` bypass.
+Dashboard built in `dashboard/` (SvelteKit 5). Builds to `dashboard/build/` and is served by the Worker via Workers Static Assets. All API calls are server-side; local dev uses the `ENVIRONMENT=development` var bypass.
 
 - [x] SvelteKit 5 app in `dashboard/` with `@sveltejs/adapter-cloudflare`
 - [x] Owner/repo grouping — top-level cards with latest coverage % + uPlot sparklines
 - [x] Drill-in view: full uPlot trend charts per metric (coverage/complexity/duplication), branch selector
 - [x] `Cf-Access-Jwt-Assertion` forwarded server-side to Worker; never touches browser JS
-- [x] Local dev bypass (`DEV_BYPASS_SECRET`) — dead code in production; documented in `.dev.vars.example`
+- [x] Local dev bypass (`ENVIRONMENT=development` var in `wrangler.json env.dev`) — absent from production
 - [x] `test/seed-local.sql` + `db:seed:local` npm script for local D1 test data
 - [x] ~~Separate Cloudflare Pages project~~ — superseded by Convergence Refactor; dashboard now ships with the Worker
 
@@ -101,7 +101,7 @@ Lives at `.github/actions/report/`. All files written and TypeScript compiled cl
 
 ### Testing plan (next session) — Option A: self-test in this repo
 
-Testing via a workflow in `coverage-tracker` itself. The GitHub App is already installed on the ZeroStash org, so the repo is already registered in D1. The action is referenced with its local path (`uses: ./.github/actions/report`) — no version pinning needed.
+Testing via a workflow in `coverage-tracker` itself. The GitHub App is already installed on the CoverageTracker org, so the repo is already registered in D1. The action is referenced with its local path (`uses: ./.github/actions/report`) — no version pinning needed.
 
 #### Layer 1 — Action runner unit tests (prerequisite — do this first)
 
@@ -156,7 +156,7 @@ Self-test workflow created. Uses `min-coverage: '20'`; actual coverage is 98.09%
 
 Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a single Worker serving both the SvelteKit SPA and all API routes. See `docs/plans/coverage-tracker-convergence-plan.md` for the full design.
 
-- [x] Single `wrangler.jsonc` — `assets.directory: ./dashboard/build`, `run_worker_first: ["/api/*"]`, `not_found_handling: single-page-application`
+- [x] Single `wrangler.json` — `assets.directory: ./dashboard/build`, `run_worker_first: ["/api/*"]`, `not_found_handling: single-page-application`
 - [x] `build.command: npm --prefix dashboard run build` — SvelteKit compiles on `wrangler deploy`
 - [x] All routes moved under `/api/*`; SPA served via `ASSETS` catch-all
 - [x] `coverage_runs` (14-day retention) + `coverage_daily` (permanent) tables — `migrations/0002_coverage.sql`
@@ -172,7 +172,7 @@ Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a
 ## Phase 7 — "Deploy to Cloudflare" button 🔶 In progress
 
 - [x] `deploy` npm script runs `wrangler d1 migrations apply DB --remote` before `wrangler deploy` — uses binding name (`DB`) not database name so the deploy flow works when users specify a different database name
-- [x] `wrangler.jsonc` committed without `database_id` — Cloudflare's deploy flow provisions D1 automatically and fills in the ID
+- [x] `wrangler.json` committed without `database_id` — Cloudflare's deploy flow provisions D1 automatically and fills in the ID
 - [x] Button added to `README.md`
 - [ ] Validate end-to-end via the deploy button flow (fork the repo, click button, confirm D1 is provisioned and migrations apply)
 
@@ -181,7 +181,7 @@ Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a
 ## Phase 8 — Docs, OSS hygiene, public release 🔶 In progress
 
 - [x] `docs/INSTALLATION.md` — full setup guide, updated for converged architecture
-- [x] Repository public at `github.com/ZeroStash/coverage-tracker`
+- [x] Repository public at `github.com/CoverageTracker/coverage-tracker`
 - [x] `wrangler.example.jsonc` and `.dev.vars.example` committed as templates (updated for convergence)
 - [x] `README.md` — root-level project overview, quick-start, badge examples (updated for convergence)
 - [ ] `CONTRIBUTING.md`

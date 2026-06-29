@@ -5,7 +5,7 @@
 The current architecture has the dashboard's SSR load functions forward the end-user's
 `Cf-Access-Jwt-Assertion` header to the Worker API. This works in production (Cloudflare
 Access injects the header), but breaks in local dev (no Access edge layer). The workaround
-is a `DEV_BYPASS_SECRET` shared between the Worker and the dashboard.
+is a `ENVIRONMENT` shared between the Worker and the dashboard.
 
 The proper server-to-server auth primitive in Cloudflare Access is a **Service Token**: a
 `client_id` + `client_secret` pair that authenticates a machine caller independently of any
@@ -16,7 +16,7 @@ Service Token, and the end-user's GitHub OAuth auth would continue to protect th
 Benefits over the current approach:
 - No JWT forwarding — the user's browser session token is never sent to the Worker
 - Works identically in local dev and production (just set the env vars)
-- Removes the `DEV_BYPASS_SECRET` workaround and its associated risk
+- Removes the `ENVIRONMENT` workaround and its associated risk
 - Cleaner separation: user auth protects the Pages URL; service auth protects the API
 
 ## What to Build
@@ -87,7 +87,7 @@ export function buildAuthHeaders(jwt: string, clientId?: string, clientSecret?: 
 **Files: `dashboard/src/routes/+page.server.ts` and `[owner]/[repo]/+page.server.ts`**
 
 Read `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` from `$env/dynamic/private` and
-pass them to `buildAuthHeaders`. Drop the `DEV_BYPASS_SECRET` reads.
+pass them to `buildAuthHeaders`. Drop the `ENVIRONMENT` reads.
 
 ### 4. Dashboard: add Service Token env vars
 
@@ -102,10 +102,10 @@ In local dev (`.env` or `.dev.vars`), set both.
 
 ### 5. Remove the dev bypass
 
-Once Service Tokens are wired up, the `DEV_BYPASS_SECRET` bypass is no longer needed:
-- Remove `DEV_BYPASS_SECRET` check from `src/middleware/access.ts`
-- Remove `DEV_BYPASS_SECRET` from `src/types.ts`
-- Remove `DEV_BYPASS_SECRET` from both `.dev.vars.example` files
+Once Service Tokens are wired up, the `ENVIRONMENT` bypass is no longer needed:
+- Remove `ENVIRONMENT` check from `src/middleware/access.ts`
+- Remove `ENVIRONMENT` from `src/types.ts`
+- Remove `ENVIRONMENT` from both `.dev.vars.example` files
 - Remove `extraHeaders` params from `fetchProjects` and `fetchTrend` in `api.ts`
   (or keep them for other future use cases)
 
@@ -121,7 +121,7 @@ Once Service Tokens are wired up, the `DEV_BYPASS_SECRET` bypass is no longer ne
 ## Notes
 
 - The Service Token secret is a Wrangler secret (not a `vars` entry) — it must never
-  appear in source or `wrangler.jsonc`.
+  appear in source or `wrangler.json`.
 - If the Worker later exposes routes that need to identify *which user* is making the
   request (e.g., per-user data isolation), the JWT forwarding path would need to be
   reinstated for those routes. This tool only tracks a single deployer's data, so

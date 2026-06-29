@@ -17,9 +17,3 @@ GITHUB_WEBHOOK_SECRET=
 CF_ACCESS_AUD=
 # Your Cloudflare Access team domain, e.g. myteam.cloudflareaccess.com
 CF_ACCESS_TEAM_DOMAIN=
-
-# Local dev only — any non-empty value disables Access JWT verification for all
-# requests to /api/projects/* and /api/admin/*. Required when running locally with
-# `npm run dev` (wrangler dev) since there is no Cloudflare Access edge in front.
-# NEVER add this to wrangler.json vars or set it as a wrangler secret.
-DEV_BYPASS_SECRET=

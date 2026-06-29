@@ -31,7 +31,6 @@ A self-hostable, open-source (MIT) code-quality dashboard. **One instance per de
 
 - **Never put a Cloudflare Access application on `/api/*`.** Machine callers (CI OIDC, webhooks, health) must reach the Worker unauthenticated at the edge. API auth is enforced in code. This is the single most important invariant.
 - **Never commit secrets.** Values are set with `wrangler secret put`. Code and `wrangler.json` may reference names only: `GITHUB_OIDC_AUDIENCE`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `GITHUB_APP_*`.
-- **Never set `DEV_BYPASS_SECRET` via `wrangler secret put`.** It exists only in `.dev.vars` for local dev. Setting it in production silently disables all Access JWT verification.
 - **Don't hand-write the `Bindings`/`Env` type.** Run `wrangler types` after any `wrangler.json` change.
 - **Don't use Workers Sites** (deprecated). Workers Static Assets only; requires Wrangler v4+.
 - **Don't make `coverage_daily` writes lossy on re-run.** All rollup writes are `ON CONFLICT … DO UPDATE`.
@@ -40,8 +39,8 @@ A self-hostable, open-source (MIT) code-quality dashboard. **One instance per de
 ## Commands
 
 ```bash
-# Dev — uses the named `dev` environment (wrangler.json env.dev), which requires
-# DEV_BYPASS_SECRET to be set in .dev.vars to bypass Access JWT verification locally.
+# Dev — uses the named `dev` environment (wrangler.json env.dev), which sets
+# ENVIRONMENT=development via vars to bypass Access JWT verification locally.
 npm run dev                 # wrangler dev --env dev (local assets + Worker)
 wrangler types              # regenerate Bindings after wrangler.json changes
 
@@ -76,13 +75,7 @@ wrangler secret put <NAME>
 
 ## Local dev
 
-`wrangler dev --env dev` activates the `dev` named environment defined in `wrangler.json`. This environment overlays the top-level config and declares `DEV_BYPASS_SECRET` as a required secret. Set it to any non-empty value in `.dev.vars`:
-
-```
-DEV_BYPASS_SECRET=dev
-```
-
-`requireAccess()` checks `c.env.DEV_BYPASS_SECRET` first — if set, it skips all Access JWT verification. This is necessary because `wrangler dev` runs without a Cloudflare Access edge in front, so neither the `Cf-Access-Jwt-Assertion` header nor the `CF_Authorization` cookie are present. The bypass is entirely absent from the production environment (no `env.dev` overlay, no `.dev.vars`).
+`wrangler dev --env dev` activates the `dev` named environment defined in `wrangler.json`. That environment's `vars` block sets `ENVIRONMENT = "development"`, which `requireAccess()` checks first to skip Access JWT verification. No `.dev.vars` entry is needed — the var is declared directly in `wrangler.json` and only applies to the `dev` named environment. The bypass is absent from production because `wrangler deploy` (which uses `--env prod`) does not apply the `env.dev` overlay.
 
 ## Gotchas
 

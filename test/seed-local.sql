@@ -3,10 +3,10 @@
 -- Safe to re-run (INSERT OR IGNORE / ON CONFLICT DO NOTHING).
 
 INSERT OR IGNORE INTO owners (id, github_id, login, type, avatar_url)
-VALUES (1, 1234567, 'ZeroStash', 'Organization', 'https://avatars.githubusercontent.com/u/1234567');
+VALUES (1, 1234567, 'CoverageTracker', 'Organization', 'https://avatars.githubusercontent.com/u/1234567');
 
 INSERT OR IGNORE INTO projects (id, owner_id, github_repo_id, repo_name, full_slug, installation_id, default_branch, badge_enabled)
-VALUES (1, 1, 9876543, 'coverage-tracker', 'ZeroStash/coverage-tracker', 1, 'main', 1);
+VALUES (1, 1, 9876543, 'coverage-tracker', 'CoverageTracker/coverage-tracker', 1, 'main', 1);
 
 -- coverage_runs: 15 pushes over the past 2 weeks, rising from ~91% to 98%
 INSERT OR IGNORE INTO coverage_runs
