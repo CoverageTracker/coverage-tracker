@@ -2,41 +2,53 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "coverage-tracker",
 	"main": "src/index.ts",
+	"send_metrics": false,
 	"compatibility_date": "2026-06-25",
 	"compatibility_flags": ["nodejs_compat"],
-
-	// SvelteKit dashboard builds into dashboard/build/ — the Worker serves it as static assets.
-	// /api/* hits the Worker first; everything else is asset-first with SPA deep-link fallback.
 	"assets": {
 		"directory": "./dashboard/build",
 		"binding": "ASSETS",
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*"]
 	},
-
 	"build": {
 		"command": "npm --prefix dashboard run build"
 	},
-
-	"observability": { "enabled": true },
-
-	// Daily rollup cron: snapshots last-of-day coverage_runs → coverage_daily, then prunes raw rows.
-	"triggers": { "crons": ["30 6 * * *"] },
-
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "coverage",
-			"database_id": "YOUR_D1_DATABASE_ID_HERE",   // ← paste output of: wrangler d1 create coverage
-			"migrations_dir": "migrations"
+	"env": {
+		"dev": {
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "coverage",
+					"migrations_dir": "migrations"
+				}
+			],
+			"secrets": {
+				"required": [
+					"DEV_BYPASS_SECRET"
+				]
+			}
+		},
+		"prod": {
+			"observability": { "enabled": true },
+			"triggers": { "crons": ["30 6 * * *"] },
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "coverage",
+					"migrations_dir": "migrations"
+				}
+			],
+			"secrets": {
+				"required": [
+					"GITHUB_APP_ID",
+					"GITHUB_APP_CLIENT_ID",
+					"GITHUB_APP_PRIVATE_KEY",
+					"GITHUB_WEBHOOK_SECRET",
+					"CF_ACCESS_AUD",
+					"CF_ACCESS_TEAM_DOMAIN"
+				]
+			}
 		}
-	]
-
-	// Secrets (set with `wrangler secret put <NAME>` — never committed):
-	//   GITHUB_APP_ID            — numeric App ID from GitHub App settings
-	//   GITHUB_APP_CLIENT_ID     — starts with "Iv23…"
-	//   GITHUB_APP_PRIVATE_KEY   — PKCS#8 PEM; see .dev.vars.example for conversion
-	//   GITHUB_WEBHOOK_SECRET    — random hex; generated during GitHub App setup
-	//   CF_ACCESS_AUD            — Access application AUD tag (from Zero Trust → Access → app settings)
-	//   CF_ACCESS_TEAM_DOMAIN    — e.g. myteam.cloudflareaccess.com
+	}
 }

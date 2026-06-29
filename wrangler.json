@@ -11,6 +11,25 @@
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*"]
 	},
+	"observability": { "enabled": true },
+	"triggers": { "crons": ["30 6 * * *"] },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "coverage",
+			"migrations_dir": "migrations"
+		}
+	],
+	"secrets": {
+		"required": [
+			"GITHUB_APP_ID",
+			"GITHUB_APP_CLIENT_ID",
+			"GITHUB_APP_PRIVATE_KEY",
+			"GITHUB_WEBHOOK_SECRET",
+			"CF_ACCESS_AUD",
+			"CF_ACCESS_TEAM_DOMAIN"
+		]
+	},
 	"build": {
 		"command": "npm --prefix dashboard run build"
 	},
@@ -29,26 +48,5 @@
 				]
 			}
 		},
-		"prod": {
-			"observability": { "enabled": true },
-			"triggers": { "crons": ["30 6 * * *"] },
-			"d1_databases": [
-				{
-					"binding": "DB",
-					"database_name": "coverage",
-					"migrations_dir": "migrations"
-				}
-			],
-			"secrets": {
-				"required": [
-					"GITHUB_APP_ID",
-					"GITHUB_APP_CLIENT_ID",
-					"GITHUB_APP_PRIVATE_KEY",
-					"GITHUB_WEBHOOK_SECRET",
-					"CF_ACCESS_AUD",
-					"CF_ACCESS_TEAM_DOMAIN"
-				]
-			}
-		}
 	}
 }
