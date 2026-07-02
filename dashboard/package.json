@@ -12,9 +12,9 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@sveltejs/kit": "^2.15.0",
-    "svelte": "^5.0.0",
-    "uplot": "^1.6.31"
+    "@sveltejs/kit": "^2.69.0",
+    "svelte": "^5.56.4",
+    "uplot": "^1.6.32"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
