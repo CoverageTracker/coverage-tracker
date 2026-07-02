@@ -42,6 +42,9 @@
 					"migrations_dir": "migrations"
 				}
 			],
+			"secrets": {
+				"required": []
+			},
 			"vars": {
 				"ENVIRONMENT": "development"
 			}
