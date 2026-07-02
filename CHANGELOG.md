@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] — Unreleased
+## [0.2.0] — Unreleased
 
 ### Consumer-generated reports (breaking change)
 
@@ -39,7 +39,7 @@ always wins). See `docs/generating-coverage-reports.md`.
 
 ```yaml
 # The Action detected the language, ran the tools, and auto-installed jscpd.
-- uses: CoverageTracker/coverage-tracker/.github/actions/report@v0
+- uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.1.2
   with:
     worker-url: https://coverage-tracker.example.com
     coverage-report-js: coverage/coverage-summary.json
@@ -52,7 +52,7 @@ always wins). See `docs/generating-coverage-reports.md`.
 # You run the tools; the Action reads the report (auto-detected).
 - run: npm test -- --coverage        # writes coverage/lcov.info
 - run: npx jscpd . --reporters json --output ./jscpd-report   # only if you want duplication
-- uses: CoverageTracker/coverage-tracker/.github/actions/report@v1
+- uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.2.0
   with:
     worker-url: https://coverage-tracker.example.com
     # coverage-path is auto-detected; complexity/duplication are optional
@@ -82,4 +82,4 @@ always wins). See `docs/generating-coverage-reports.md`.
 - `coverage-report-go` / `coverage-report-python` / `coverage-report-js` inputs.
 - `dist/run.js` (replaced by `dist/index.js`).
 
-[1.0.0]: https://github.com/CoverageTracker/coverage-tracker/releases/tag/v1.0.0
+[0.2.0]: https://github.com/CoverageTracker/coverage-tracker/releases/tag/v0.2.0

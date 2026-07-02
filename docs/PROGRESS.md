@@ -179,7 +179,7 @@ Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a
 
 Moved from "the Action runs the tool" to "the consumer runs the tool, the Action
 reads the file." See `docs/plans/consumer-generated-reports-migration-plan-v3.md`
-(Plan A). Breaking change — targets **v1.0.0**.
+(Plan A). Breaking change — targets **v0.2.0** (minor bump under 0.x semver).
 
 - [x] Retired `collect.sh` and all inline Python parsers; `action.yml` is now a
       plain `node20` action (`main: dist/index.js`)
@@ -208,7 +208,7 @@ reads the file." See `docs/plans/consumer-generated-reports-migration-plan-v3.md
 - [x] Docs authored in the `.svx` source of truth (coveragetracker.dev);
       `docs/generating-coverage-reports.md` + `docs/INSTALLATION.md` land via the
       export/sync PR. Root `README.md` and the Action `README.md` updated here.
-- [ ] `CHANGELOG.md` + v1.0.0 tag (release step — pending)
+- [ ] `CHANGELOG.md` + v0.2.0 tag (release step — pending)
 
 ---
 
