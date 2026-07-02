@@ -6,8 +6,8 @@ on:
   pull_request:
 
 permissions:
-  id-token: write
-  checks: write
+  id-token: write # mint OIDC token for the Action → Worker ingest
+  checks: write # post the PR Check Run
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -18,22 +18,74 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      # Run the Action runner's own unit tests.
-      # vitest --coverage emits coverage/coverage-summary.json (Istanbul json-summary format),
-      # which is exactly what collect.sh reads for the JS coverage path.
-      # The Action dogfoods itself: real test coverage replaces a hardcoded artifact.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+
+      # ── 1. Unit-test the Action runner ──────────────────────────────────────
+      # vitest --coverage emits coverage/lcov.info (the lcov reporter). The Action
+      # dogfoods itself: its own real coverage becomes the reported artifact.
       - name: Test Action runner
         working-directory: .github/actions/report
         run: npm ci && npm test
 
-      # Run the collect.sh parser fixture tests.
-      - name: Test collect.sh parsers
-        run: bash test/collect-parsers.sh
+      # ── 2. Stage the LCOV report at the zero-config probe path ──────────────
+      # coverage/lcov.info (repo root) is probe #2, so the Action auto-detects it
+      # with no coverage-path input — exercising the most common consumer path.
+      - name: Stage coverage for zero-config probe
+        run: |
+          mkdir -p coverage
+          cp .github/actions/report/coverage/lcov.info coverage/lcov.info
 
-      # Disabled until a Coverage Tracker instance is running at demo.coveragetracker.dev.
-      # - uses: ./.github/actions/report
-      #   with:
-      #     worker-url: https://demo.coveragetracker.dev
-      #     min-coverage: '20'
-      #     max-coverage-drop: '5'
-      #     coverage-report-js: .github/actions/report/coverage/coverage-summary.json
+      # ── 3. Spin up the Worker locally with a seeded D1 ──────────────────────
+      - name: Install Worker dependencies
+        run: npm ci
+
+      - name: Apply D1 migrations (local)
+        run: npx wrangler d1 migrations apply DB --local --env dev
+
+      - name: Seed local D1 with this repository
+        # Register this repo so the OIDC-verified `repository` claim resolves to
+        # a project on the default branch (required by /api/ci + /api/baseline).
+        run: |
+          cat > seed-ci.sql <<SQL
+          INSERT OR REPLACE INTO owners (id, github_id, login, type, avatar_url)
+          VALUES (1, 1, '${{ github.repository_owner }}', 'Organization', '');
+          INSERT OR REPLACE INTO projects
+            (id, owner_id, github_repo_id, repo_name, full_slug, installation_id, default_branch, badge_enabled)
+          VALUES
+            (1, 1, 1, '${{ github.event.repository.name }}', '${{ github.repository }}', 1, '${{ github.event.repository.default_branch }}', 1);
+          SQL
+          npx wrangler d1 execute DB --local --env dev --file seed-ci.sql
+
+      - name: Start Worker (wrangler dev)
+        run: |
+          npx wrangler dev --env dev --port 8787 > wrangler.log 2>&1 &
+          echo "WRANGLER_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for Worker to be ready
+        # `wrangler dev` runs the wrangler.json build.command (a cold SvelteKit
+        # clean-install + build) before it serves /api/*, so allow a generous
+        # budget (~5 min) rather than assuming the Worker is up quickly.
+        run: |
+          for i in $(seq 1 150); do
+            if curl -sf http://localhost:8787/api/health > /dev/null; then
+              echo "Worker is up after ~$((i * 2))s."; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Worker did not become ready in time."
+          cat wrangler.log
+          exit 1
+
+      # ── 4. Dogfood: run the local Action zero-config against the local Worker ─
+      # push → main ingests; pull_request → baseline fetch + threshold Check Run.
+      # min-coverage is intentionally low so the self-test passes on real coverage.
+      - uses: ./.github/actions/report
+        with:
+          worker-url: http://localhost:8787
+          min-coverage: '1'
+
+      - name: Worker logs
+        if: always()
+        run: cat wrangler.log || true

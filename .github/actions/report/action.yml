@@ -1,9 +1,11 @@
 name: 'Coverage Tracker Report'
 description: >
-  Collect code-quality metrics (coverage, complexity, duplication) and report
-  them to a self-hosted coverage-tracker Worker. On push to the default branch
-  the metrics are persisted; on pull_request a Check Run is posted and the job
-  fails if any configured threshold is breached.
+  Read consumer-produced code-quality reports (coverage, complexity,
+  duplication) and report them to a self-hosted coverage-tracker Worker. The
+  Action does NOT run your tests or coverage tools — run those first, then point
+  this Action at the report files (or rely on default-path auto-detection). On
+  push to the default branch the metrics are persisted; on pull_request a Check
+  Run is posted and the job fails if any configured threshold is breached.
 
   Required consuming-workflow permissions:
     permissions:
@@ -19,27 +21,43 @@ inputs:
       e.g. https://coverage.example.com
     required: true
 
-  # ── Coverage artifact paths (consumer runs tests first) ──────────────────
-  coverage-report-go:
+  # ── Coverage report (consumer runs tests first) ──────────────────────────
+  coverage-path:
     description: >
-      Path to the Go coverage profile written by
-      go test -coverprofile=<path> ./...
+      Path to the coverage report. Optional: when unset, the Action probes the
+      documented per-language default paths (LCOV, Cobertura, JaCoCo, or the Go
+      coverage profile) and uses the first hit. Fails with the list of probed
+      paths if none is found. An explicit path always wins.
     required: false
-    default: 'coverage.out'
+    default: ''
 
-  coverage-report-python:
+  coverage-tool:
     description: >
-      Path to the coverage.py JSON report written by
-      coverage json -o <path>
+      Only relevant for Cobertura reports, whose branch-coverage semantics vary
+      by producer (e.g. coverage.py, gcovr, phpunit). Naming the tool silences
+      the "trusting the data" warning. Ignored for LCOV / JaCoCo / Go.
     required: false
-    default: 'coverage.json'
+    default: ''
 
-  coverage-report-js:
+  # ── Optional complexity / duplication reports ────────────────────────────
+  complexity-path:
     description: >
-      Path to the Istanbul/Vitest coverage-summary.json written by
-      vitest run --coverage or jest --coverage
+      Path to a complexity report (Radon JSON, gocyclo text, or Lizard XML).
+      Optional: when unset, the Action probes radon.json → gocyclo.txt →
+      lizard-report.xml. If a JaCoCo coverage report is supplied, complexity is
+      derived from it for free unless a complexity report overrides it. Missing
+      is a hard failure only when max-complexity is set; otherwise skipped.
     required: false
-    default: 'coverage/coverage-summary.json'
+    default: ''
+
+  duplication-path:
+    description: >
+      Path to a jscpd JSON report. Optional: when unset, the Action probes
+      jscpd-report/jscpd-report.json. The Action no longer runs jscpd itself —
+      run it first. Missing is a hard failure only when max-duplication is set;
+      otherwise skipped.
+    required: false
+    default: ''
 
   # ── Thresholds (all optional; omit to skip that check) ───────────────────
   min-coverage:
@@ -59,38 +77,27 @@ inputs:
 
   max-complexity:
     description: >
-      Maximum allowed average cyclomatic complexity score.
-      Job fails if the collected complexity exceeds this value.
+      Maximum allowed average cyclomatic complexity score. Job fails if the
+      collected complexity exceeds this value. When set, a missing complexity
+      report is a hard failure.
     required: false
     default: ''
 
   max-duplication:
     description: >
-      Maximum allowed code duplication percentage.
-      Job fails if jscpd reports a higher percentage.
+      Maximum allowed code duplication percentage. Job fails if the jscpd report
+      exceeds this value. When set, a missing duplication report is a hard
+      failure.
     required: false
     default: ''
 
-runs:
-  using: 'composite'
-  steps:
-    - name: Collect metrics
-      id: collect
-      shell: bash
-      env:
-        COVERAGE_REPORT_GO: ${{ inputs.coverage-report-go }}
-        COVERAGE_REPORT_PYTHON: ${{ inputs.coverage-report-python }}
-        COVERAGE_REPORT_JS: ${{ inputs.coverage-report-js }}
-      run: bash "${{ github.action_path }}/collect.sh"
+  github-token:
+    description: >
+      Token used to post the PR Check Run. Defaults to the workflow's
+      automatic GITHUB_TOKEN; override only if you need a different identity.
+    required: false
+    default: ${{ github.token }}
 
-    - name: Report metrics
-      shell: bash
-      env:
-        WORKER_URL: ${{ inputs.worker-url }}
-        MIN_COVERAGE: ${{ inputs.min-coverage }}
-        MAX_COVERAGE_DROP: ${{ inputs.max-coverage-drop }}
-        MAX_COMPLEXITY: ${{ inputs.max-complexity }}
-        MAX_DUPLICATION: ${{ inputs.max-duplication }}
-        METRICS_FILE: ${{ steps.collect.outputs.metrics-file }}
-        GITHUB_TOKEN: ${{ github.token }}
-      run: node ${{ github.action_path }}/dist/run.js
+runs:
+  using: 'node24'
+  main: 'dist/index.js'

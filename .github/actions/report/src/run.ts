@@ -59,6 +59,17 @@ export async function run(): Promise<void> {
     return;
   }
 
+  await report(workerUrl, metrics);
+}
+
+/**
+ * Report an already-collected metrics array: branch/OIDC gating, then dispatch
+ * to ingest (push) or PR check. Shared by the legacy metrics-file entrypoint
+ * (`run`) and the parser-pipeline entrypoint (`src/index.ts`).
+ */
+export async function report(workerUrl: string, metrics: Metric[]): Promise<void> {
+  workerUrl = workerUrl.replace(/\/$/, '');
+
   core.info(`Reporting ${metrics.length} metric(s): ${metrics.map((m) => m.name).join(', ')}`);
 
   const eventName = process.env.GITHUB_EVENT_NAME ?? '';
@@ -316,10 +327,4 @@ export function buildSummary(results: ThresholdResult[]): string {
     '|--------|---------|----------|--------|--------|',
     rows,
   ].join('\n');
-}
-
-if (require.main === module) {
-  run().catch((err) => {
-    core.setFailed(err instanceof Error ? err.message : String(err));
-  });
 }

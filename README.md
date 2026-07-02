@@ -31,7 +31,7 @@ Runs entirely on your own Cloudflare account (Worker + D1). Your data stays in y
 ## How it works
 
 1. **Install the GitHub App** on the repos you want to track. The Worker registers them automatically via webhook.
-2. **Add a workflow step** to your CI that runs the reporting Action after your test suite. It collects coverage/complexity/duplication numbers and pushes them to the Worker using a GitHub Actions OIDC token — no static secrets.
+2. **Add a workflow step** to your CI that runs the reporting Action after your test suite. You run your tests and coverage tools; the Action reads the report file they produce (LCOV, Cobertura, JaCoCo, or the Go coverage profile — auto-detected) and pushes the numbers to the Worker using a GitHub Actions OIDC token — no static secrets.
 3. **View trends** in the dashboard (served as static assets by the Worker), protected by Cloudflare Access so only you can see it.
 4. Optionally **embed a badge** in your README.
 
@@ -39,8 +39,8 @@ Runs entirely on your own Cloudflare account (Worker + D1). Your data stays in y
 ┌─────────────────────────────────────────────────────────┐
 │  Your CI (GitHub Actions)                               │
 │                                                         │
-│  run tests → collect metrics → POST /api/ci/coverage    │
-│              (OIDC token, no static secret)             │
+│  run tests → write report → Action reads it → POST      │
+│  /api/ci/coverage   (OIDC token, no static secret)      │
 └───────────────────────────┬─────────────────────────────┘
                             │
                             ▼
@@ -86,6 +86,31 @@ See **[docs/INSTALLATION.md](docs/INSTALLATION.md)** for the full setup guide. T
 4. Create a GitHub OAuth App (for Cloudflare Access login)
 5. Configure Cloudflare Zero Trust and deploy the Worker (the dashboard SPA deploys with it automatically)
 6. Install the GitHub App on your repos
+
+Then add the reporting Action to each repo's CI. Run your tests first; the Action
+auto-detects the coverage report from the common default paths — zero config:
+
+```yaml
+# .github/workflows/coverage.yml
+permissions:
+  id-token: write   # OIDC token for Worker auth
+  checks: write     # PR Check Run
+
+steps:
+  - uses: actions/checkout@v4
+  - run: npm test -- --coverage        # writes coverage/lcov.info
+  - uses: CoverageTracker/coverage-tracker/.github/actions/report@v1
+    with:
+      worker-url: https://coverage-tracker.yourdomain.com
+      # coverage-path is optional — auto-detected. Thresholds are optional too:
+      # min-coverage: '80'
+      # max-coverage-drop: '2'
+```
+
+The Action no longer runs your tests, coverage tools, or jscpd — run those
+yourself and point it at (or let it auto-detect) the report. See
+[docs/generating-coverage-reports.md](docs/generating-coverage-reports.md) for
+the per-language commands and default paths.
 
 ---
 
@@ -149,13 +174,12 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/api/admin/projects/1/badge
 ├── dashboard/            # SvelteKit 5 source; builds to dashboard/build/ (served by Worker)
 │   └── src/routes/       # Overview + per-repo drill-in views
 ├── .github/
-│   ├── actions/report/   # Composite reporting Action (collect + ingest + Check Runs)
+│   ├── actions/report/   # Node reporting Action (parse reports + ingest + Check Runs)
 │   └── workflows/        # CI: action-test.yml, deploy.yml
 ├── scripts/
 │   └── setup-waf-rules.mjs  # WAF skip rule for /api/ci/coverage + /api/webhooks/github
 ├── test/
-│   ├── seed-local.sql       # Local D1 seed data
-│   └── collect-parsers.sh   # Parser fixture tests for collect.sh
+│   └── seed-local.sql       # Local D1 seed data
 ├── docs/
 │   ├── INSTALLATION.md   # Setup guide
 │   ├── PROGRESS.md       # Phase implementation status

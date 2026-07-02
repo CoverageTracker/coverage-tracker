@@ -84,6 +84,12 @@ Dashboard built in `dashboard/` (SvelteKit 5). Builds to `dashboard/build/` and 
 
 ## Phase 6 — Composite reporting Action ✅ Complete
 
+> **Superseded (see "Consumer-generated reports migration" below).** The
+> `collect.sh` composite step, the language-detection/tool-running behavior,
+> jscpd auto-install, and the `dist/run.js` bundle described in this section
+> were replaced by a Node action that parses consumer-produced reports. History
+> is kept intact; the auto-run bullets no longer describe current behavior.
+
 Lives at `.github/actions/report/`. All files written and TypeScript compiled clean; `dist/run.js` committed. E2E self-test verified: push-to-main ingests, feature-branch push skips cleanly, PR Check Runs post correctly with threshold enforcement.
 
 - [x] Action scaffold (`action.yml`, inputs: `worker-url`, threshold knobs; invokes `collect.sh` via `bash` to avoid exec-permission issues)
@@ -166,6 +172,43 @@ Collapsed the old separate Cloudflare Pages dashboard + standalone Worker into a
 - [x] `src/lib/metrics.ts` — metric name → D1 column mapping
 - [x] `src/routes/ci.ts` → `POST /api/ci/coverage` (typed columns, not EAV)
 - [x] `src/routes/baseline.ts` → `GET /api/baseline/:owner/:repo` (OIDC-gated)
+
+---
+
+## Consumer-generated reports migration ✅ Complete
+
+Moved from "the Action runs the tool" to "the consumer runs the tool, the Action
+reads the file." See `docs/plans/consumer-generated-reports-migration-plan-v3.md`
+(Plan A). Breaking change — targets **v1.0.0**.
+
+- [x] Retired `collect.sh` and all inline Python parsers; `action.yml` is now a
+      plain `node20` action (`main: dist/index.js`)
+- [x] New TypeScript parser pipeline: `format.ts` (content sniffer for 4
+      formats), `lcov.ts`, `goprofile.ts` (native Go profile), `cobertura.ts`
+      (+ quirks table), `jacoco.ts` (line/branch **+ derived cyclomatic**),
+      `complexity/{radon,gocyclo,lizard,detect}.ts`, `duplication.ts` (jscpd),
+      `paths.ts` (input-or-probe resolution)
+- [x] `src/index.ts` orchestrates parse → threshold → Check Run → ingest;
+      `run.ts` refactored to a pure helper module (`report()` extracted, no
+      auto-executing entrypoint). The 52 existing `run.ts` tests stay green.
+- [x] Coverage formats: LCOV, Cobertura XML, JaCoCo XML, Go native profile —
+      auto-detected by content. `coverage-path` optional with default-path
+      probing; explicit path wins.
+- [x] Fail-vs-skip rule: coverage always required; complexity/duplication skip
+      silently unless `max-complexity`/`max-duplication` is set, in which case a
+      missing report is a hard failure.
+- [x] `fast-xml-parser` added as the single bundled XML dependency
+- [x] Tests: 46 new vitest module tests (fixture-per-format, probe order/
+      precedence, threshold-configured-but-missing) alongside the 52 kept
+      `run.ts` tests — 98 total, green. `test/collect-parsers.sh` retired.
+- [x] Dogfood self-test (`action-test.yml`) re-enabled: vitest emits
+      `coverage/lcov.info`, staged at the repo-root probe path; a local
+      `wrangler dev` + seeded D1 lets the Action report end-to-end with zero
+      config (LCOV loop).
+- [x] Docs authored in the `.svx` source of truth (coveragetracker.dev);
+      `docs/generating-coverage-reports.md` + `docs/INSTALLATION.md` land via the
+      export/sync PR. Root `README.md` and the Action `README.md` updated here.
+- [ ] `CHANGELOG.md` + v1.0.0 tag (release step — pending)
 
 ---
 
