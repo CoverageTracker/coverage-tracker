@@ -169,6 +169,9 @@ describe('run()', () => {
     vi.stubEnv('GITHUB_REF_NAME', 'main');
     vi.stubEnv('GITHUB_REPOSITORY', 'owner/repo');
     vi.stubEnv('GITHUB_TOKEN', 'ghs_mock');
+    // Only set by the Actions runtime when the job has `id-token: write`; stub it
+    // here so run() reaches the getIDToken()/fetch() calls under test locally.
+    vi.stubEnv('ACTIONS_ID_TOKEN_REQUEST_URL', 'https://token.example.com/');
   });
 
   afterEach(() => {
