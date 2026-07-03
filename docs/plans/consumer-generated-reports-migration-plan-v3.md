@@ -1,5 +1,9 @@
 # Migration plan: consumer-generated reports (v2)
 
+> **Status: complete.** Released as v0.2.0 (2026-07-02). All checkboxes below
+> reflect verified repo state as of that release; see `docs/PROGRESS.md` for
+> the canonical completion record.
+
 Moves coverage, complexity, and duplication from "the Action runs the tool" to
 "the consumer runs the tool, the Action reads the file." LCOV is accepted
 wherever a language's tooling produces it; Cobertura and JaCoCo are supported,
@@ -83,8 +87,8 @@ runs:
 
 This also removes the old "invoke `collect.sh` via `bash`" workaround.
 
-- [ ] Delete `collect.sh` and all inline Python parsers
-- [ ] New entrypoint `src/index.ts` does, in order:
+- [x] Delete `collect.sh` and all inline Python parsers
+- [x] New entrypoint `src/index.ts` does, in order:
   1. Resolve coverage file: `coverage-path` input if set, else probe the
      documented default paths in a fixed, documented order; **fail with the
      probed-path list** if nothing is found
@@ -150,49 +154,49 @@ with the parser pipeline. Strip the collect.sh spawn path (and its
 `require.main` guard trigger) out of run.ts; run.ts becomes a pure helper
 module.
 
-- [ ] `src/index.ts` — new entrypoint (orchestration per Phase 2)
-- [ ] `src/format.ts` — coverage format sniffer (4 formats incl. Go profile)
-- [ ] `src/lcov.ts`
-- [ ] `src/goprofile.ts` — native `go tool cover` profile parser
-- [ ] `src/cobertura.ts` + quirks table (uses fast-xml-parser)
-- [ ] `src/jacoco.ts` (already written) — extend to emit `cyclomatic` from
+- [x] `src/index.ts` — new entrypoint (orchestration per Phase 2)
+- [x] `src/format.ts` — coverage format sniffer (4 formats incl. Go profile)
+- [x] `src/lcov.ts`
+- [x] `src/goprofile.ts` — native `go tool cover` profile parser
+- [x] `src/cobertura.ts` + quirks table (uses fast-xml-parser)
+- [x] `src/jacoco.ts` (already written) — extend to emit `cyclomatic` from
       `COMPLEXITY`/`METHOD` counters
-- [ ] `src/complexity/radon.ts`, `src/complexity/gocyclo.ts`,
+- [x] `src/complexity/radon.ts`, `src/complexity/gocyclo.ts`,
       `src/complexity/lizard.ts`, `src/complexity/detect.ts` (shape sniffer)
-- [ ] `src/duplication.ts` (jscpd JSON)
-- [ ] `src/paths.ts` — input-or-default-probe resolution for all three
+- [x] `src/duplication.ts` (jscpd JSON)
+- [x] `src/paths.ts` — input-or-default-probe resolution for all three
       report kinds, incl. probe-order tables above and the
       fail-vs-skip rule from Phase 1
-- [ ] `src/run.ts` — remove collect.sh invocation; helpers only
-- [ ] Add `fast-xml-parser` to dependencies
-- [ ] Update `action.yml` inputs: `coverage-path` (optional, probed),
+- [x] `src/run.ts` — remove collect.sh invocation; helpers only
+- [x] Add `fast-xml-parser` to dependencies
+- [x] Update `action.yml` inputs: `coverage-path` (optional, probed),
       `coverage-tool` (conditional, Cobertura only), `complexity-path`
       (optional), `duplication-path` (optional); remove anything tied to
       auto-run behavior
-- [ ] Rebuild: commit `dist/index.js`; **delete `dist/run.js`**; update any
+- [x] Rebuild: commit `dist/index.js`; **delete `dist/run.js`**; update any
       reference to the old bundle path
 
 ### Phase 4 — Tests
 
-- [ ] Layer 1 (vitest): keep the existing 52 run.ts tests as-is; add unit
+- [x] Layer 1 (vitest): keep the existing 52 run.ts tests as-is; add unit
       tests per new module, fixture-per-format (LCOV, Go profile, Cobertura
       per quirks entry, JaCoCo incl. complexity derivation, Radon, gocyclo,
       Lizard, jscpd); add tests for probe order/precedence and the
       threshold-configured-but-missing failure
-- [ ] Layer 2 (`test/collect-parsers.sh`): retire entirely; fold remaining
+- [x] Layer 2 (`test/collect-parsers.sh`): retire entirely; fold remaining
       fixture checks into the vitest suite
-- [ ] Re-enable `.github/workflows/action-test.yml` (dogfood): run vitest
+- [x] Re-enable `.github/workflows/action-test.yml` (dogfood): run vitest
       with the `lcov` coverage reporter, then invoke the local Action with
       no `coverage-path` — the probe finds `coverage/lcov.info`, closing the
       zero-config LCOV loop end-to-end. Keep the push-main / feature-branch /
       PR threshold matrix from the previous self-test
-- [ ] Verify (no code change expected): Worker `POST /api/ci/coverage`
+- [x] Verify (no code change expected): Worker `POST /api/ci/coverage`
       accepts payloads with only `line_coverage` — complexity/duplication
       fields optional per existing zod schema
 
 ### Phase 5 — Markdown documentation
 
-- [ ] `docs/generating-coverage-reports.md` — **generated file, do not edit
+- [x] `docs/generating-coverage-reports.md` — **generated file, do not edit
       directly.** Canonical source is `generating-coverage-reports.svx` in
       the coveragetracker.dev repo (see Plan B, Phase 2a). Author these
       changes there; the sync pipeline PRs them into this repo:
@@ -205,20 +209,22 @@ module.
       - If the sync pipeline isn't live yet when Plan A reaches this phase,
         make the edits in the `.svx` and copy the exported output over
         manually once — never fork the content
-- [ ] `.github/actions/report/README.md` — inputs table: `coverage-path` now
+- [x] `.github/actions/report/README.md` — inputs table: `coverage-path` now
       optional (probed), `complexity-path` / `duplication-path` optional with
       probe fallback; document fail-vs-skip semantics
-- [ ] `docs/PROGRESS.md` — new phase entry; mark superseded auto-run entries
+- [x] `docs/PROGRESS.md` — new phase entry; mark superseded auto-run entries
       as superseded rather than deleting history
-- [ ] `docs/INSTALLATION.md` — update the CI example under "Next steps":
+- [x] `docs/INSTALLATION.md` — update the CI example under "Next steps":
       explicit test/coverage step, then the Action with zero config
-      (complexity/duplication shown as optional additions)
-- [ ] Root `README.md` — update quick-start snippet (zero-config example)
+      (complexity/duplication shown as optional additions) — landed via the
+      `docs-sync` PR (#42, 2026-07-02) from the coveragetracker.dev source
+- [x] Root `README.md` — update quick-start snippet (zero-config example)
 
 ### Phase 6 — Release
 
-- [ ] Major version tag
-- [ ] `CHANGELOG.md`: before/after workflow example; **explicitly call out**:
+- [x] Version tag — released as **v0.2.0** (minor bump under 0.x semver, per
+      the breaking-change note in `CHANGELOG.md`)
+- [x] `CHANGELOG.md`: before/after workflow example; **explicitly calls out**:
       (a) the Action no longer runs tests or coverage tools, (b) jscpd is no
       longer auto-installed — duplication silently disappears for consumers
       who relied on it unless they add a jscpd step or set

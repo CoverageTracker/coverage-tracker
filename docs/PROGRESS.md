@@ -208,7 +208,7 @@ reads the file." See `docs/plans/consumer-generated-reports-migration-plan-v3.md
 - [x] Docs authored in the `.svx` source of truth (coveragetracker.dev);
       `docs/generating-coverage-reports.md` + `docs/INSTALLATION.md` land via the
       export/sync PR. Root `README.md` and the Action `README.md` updated here.
-- [ ] `CHANGELOG.md` + v0.2.0 tag (release step — pending)
+- [x] `CHANGELOG.md` + v0.2.0 tag — released 2026-07-02
 
 ---
 
