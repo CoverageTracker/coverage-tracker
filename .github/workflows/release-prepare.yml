@@ -60,6 +60,7 @@ jobs:
           PREV_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "PREV_TAG=$PREV_TAG" >> "$GITHUB_ENV"
+          echo "BASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "Preparing v$VERSION (previous tag: ${PREV_TAG:-none})"
 
       - name: Generate changelog section
@@ -82,18 +83,24 @@ jobs:
           sed -i -E "s#(\.github/actions/report@v)[0-9]+\.[0-9]+\.[0-9]+#\1${VERSION}#g" \
             README.md .github/actions/report/README.md
 
-      - name: Commit release changes
+      - name: Create release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "release/v$VERSION"
-          git add \
+          gh api "repos/${{ github.repository }}/git/refs" \
+            -f ref="refs/heads/release/v$VERSION" \
+            -f sha="$BASE_SHA"
+
+      - name: Commit release changes (verified, via API)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node .github/scripts/create-verified-commit.mjs \
+            "${{ github.repository }}" "release/v$VERSION" "$BASE_SHA" "chore(release): v$VERSION" \
             package.json package-lock.json \
             dashboard/package.json dashboard/package-lock.json \
             .github/actions/report/package.json .github/actions/report/package-lock.json \
             CHANGELOG.md README.md .github/actions/report/README.md
-          git commit -m "chore(release): v$VERSION"
-          git push origin "release/v$VERSION"
 
       - name: Open release PR
         env:
