@@ -19,7 +19,7 @@ permissions:
 steps:
   - uses: actions/checkout@v4
   - run: npm test -- --coverage        # your tests write coverage/lcov.info
-  - uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.2.0
+  - uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.3.0
     with:
       worker-url: https://coverage-tracker.yourdomain.com
 ```

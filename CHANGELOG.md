@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-07-05
+
+### Added
+
+- add automated release workflows (#46) (67d8bff)
+
+### Fixed
+
+- create the release commit via GitHub's GraphQL API (#48) (69d7121)
+- use the last CCN average in multi-file lizard XML reports (bc3dbbf)
+- bump fast-xml-parser to v5 and fix ambient-env test gap in report action (16d03de)
+
 ## [0.2.0] — 2026-07-02
 
 ### Consumer-generated reports (breaking change)
@@ -82,4 +94,5 @@ always wins). See `docs/generating-coverage-reports.md`.
 - `coverage-report-go` / `coverage-report-python` / `coverage-report-js` inputs.
 - `dist/run.js` (replaced by `dist/index.js`).
 
+[0.3.0]: https://github.com/CoverageTracker/coverage-tracker/releases/tag/v0.3.0
 [0.2.0]: https://github.com/CoverageTracker/coverage-tracker/releases/tag/v0.2.0
