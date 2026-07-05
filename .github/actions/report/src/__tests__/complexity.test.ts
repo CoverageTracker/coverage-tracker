@@ -67,6 +67,26 @@ describe('parseLizard', () => {
     // (4 + 2 + 6) / 3 = 4
     expect(parseLizard(xml)).toEqual({ cyclomatic: 4 });
   });
+
+  it('uses the final cumulative average across a multi-file report, not the first file\'s', () => {
+    // Real lizard --xml output for a multi-file project writes a running
+    // cumulative <average label="CCN"> after each file's items (all as flat
+    // siblings, since the format has no per-file nesting) — only the last
+    // one covers every function. Reproduces the shape seen scaffolding
+    // example-rust: a single-function first file averaging 1.0 masked the
+    // true 5-function project average of 2.2.
+    const xml =
+      '<?xml version="1.0"?><cppncss><measure type="Function">' +
+      '<item name="onlyFn"><value>1</value><value>3</value><value>1</value></item>' +
+      '<average label="NCSS" value="3"/><average label="CCN" value="1"/>' +
+      '<item name="a"><value>2</value><value>10</value><value>4</value></item>' +
+      '<item name="b"><value>3</value><value>5</value><value>2</value></item>' +
+      '<item name="c"><value>4</value><value>8</value><value>3</value></item>' +
+      '<item name="d"><value>5</value><value>6</value><value>1</value></item>' +
+      '<average label="NCSS" value="6.4"/><average label="CCN" value="2.2"/>' +
+      '</measure></cppncss>';
+    expect(parseLizard(xml)).toEqual({ cyclomatic: 2.2 });
+  });
 });
 
 describe('detectComplexityShape', () => {

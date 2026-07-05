@@ -32,9 +32,13 @@ export function parseLizard(content: string): ComplexityResult {
   const fn = measures.find((m) => m['@_type'] === 'Function');
   if (!fn) return { cyclomatic: 0 };
 
-  // Preferred: the tool-computed CCN average.
+  // Preferred: the tool-computed CCN average. For multi-file reports, lizard
+  // writes a running cumulative average after each file's items (all as flat
+  // siblings under this single <measure> element, since the format has no
+  // per-file nesting) — only the *last* one reflects the whole project, so
+  // take the last match rather than the first.
   const averages = toArray(fn.average as Record<string, unknown>[] | undefined);
-  const ccnAverage = averages.find((a) => a['@_label'] === 'CCN');
+  const ccnAverage = averages.filter((a) => a['@_label'] === 'CCN').at(-1);
   if (ccnAverage) {
     const v = Number(ccnAverage['@_value']);
     if (Number.isFinite(v)) return { cyclomatic: round(v) };
