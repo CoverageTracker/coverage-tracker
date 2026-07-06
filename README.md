@@ -1,6 +1,7 @@
 # coverage-tracker
 
 ![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fdemo.coveragetracker.dev%2Fapi%2Fbadge%2FCoverageTracker%2Fcoverage-tracker%2Fcoverage.json)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FCoverageTracker%2Fcoverage-tracker.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FCoverageTracker%2Fcoverage-tracker?ref=badge_shield)
 
 A self-hosted dashboard that tracks code coverage, cyclomatic complexity, and code duplication across your GitHub repositories — with trend charts, per-PR diff checks, and README badges.
 
@@ -263,3 +264,6 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FCoverageTracker%2Fcoverage-tracker.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FCoverageTracker%2Fcoverage-tracker?ref=badge_large)
