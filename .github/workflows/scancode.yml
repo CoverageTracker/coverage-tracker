@@ -20,6 +20,18 @@ jobs:
         with:
           path: scancode-inputs
 
+      # scancode-action installs scancodeio via `pip install --upgrade` on every run with
+      # no lockfile to key on, so this uses the run_id-in-key / prefix-restore-keys idiom:
+      # always misses the exact key (guaranteeing a fresh save from this run's pip cache)
+      # while still restoring the most recent prior cache as a warm starting point.
+      - name: Cache pip packages for ScanCode
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-scancode-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-pip-scancode-
+
       - uses: aboutcode-org/scancode-action@e46d127dfbe502ad2699fbbba8efedad1b2adbd1 # beta
         with:
           pipelines: "scan_codebase"
