@@ -1,0 +1,28 @@
+name: License Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: ScanCode
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: scancode-inputs
+
+      - uses: aboutcode-org/scancode-action@e46d127dfbe502ad2699fbbba8efedad1b2adbd1 # beta
+        with:
+          pipelines: "scan_codebase"
+          output-formats: "json spdx cyclonedx"
+          check-compliance: true
+          compliance-fail-level: "ERROR"
