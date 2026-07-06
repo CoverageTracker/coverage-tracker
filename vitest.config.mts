@@ -1,10 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers';
+import { githubOutboundService } from './test/helpers/outbound';
 
 export default defineConfig({
   plugins: [
-    cloudflareTest({
-      wrangler: { configPath: './wrangler.json' },
+    cloudflareTest(async ({ inject }) => {
+      // Generated once in test/global-setup.ts and read here via the injected
+      // `inject`, not the plain `vitest` import — only this reference is
+      // guaranteed to resolve provide()d values from the plugin-options callback.
+      const oidcJwk = inject('oidcTestPublicJwk');
+      return {
+        wrangler: { configPath: './wrangler.json' },
+        miniflare: {
+          // fetchMock isn't exported by cloudflare:test in this pool version, so GitHub
+          // API + JWKS calls made by the worker under test are intercepted here instead.
+          outboundService: (request: Request) => githubOutboundService(request, oidcJwk),
+        },
+      };
     }),
   ],
   test: {
