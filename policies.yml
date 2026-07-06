@@ -1,0 +1,42 @@
+license_policies:
+  # Approved — permissive, MIT-compatible
+  - license_key: mit
+    label: Approved License
+    compliance_alert: ''
+  - license_key: apache-2.0
+    label: Approved License
+    compliance_alert: ''
+  - license_key: bsd-new
+    label: Approved License
+    compliance_alert: ''
+  - license_key: bsd-simplified
+    label: Approved License
+    compliance_alert: ''
+  - license_key: isc
+    label: Approved License
+    compliance_alert: ''
+  - license_key: 0bsd
+    label: Approved License
+    compliance_alert: ''
+  - license_key: unlicense
+    label: Approved License
+    compliance_alert: ''
+  - license_key: cc0-1.0
+    label: Approved License
+    compliance_alert: ''
+  - license_key: python
+    label: Approved License
+    compliance_alert: ''
+  # Prohibited — strong copyleft, incompatible with MIT distribution
+  - license_key: gpl-2.0
+    label: Prohibited License
+    compliance_alert: error
+  - license_key: gpl-3.0
+    label: Prohibited License
+    compliance_alert: error
+  - license_key: agpl-3.0
+    label: Prohibited License
+    compliance_alert: error
+  - license_key: lgpl-3.0
+    label: Prohibited License
+    compliance_alert: error
