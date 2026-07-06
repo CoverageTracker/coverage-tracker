@@ -4,6 +4,9 @@ import {
   upsertCoverageRun,
   getCoverageTrend,
   getLatestCoverage,
+  insertMetric,
+  getMetricsTrend,
+  getLatestMetric,
 } from '../src/lib/db';
 import type { Bindings } from '../src/types';
 
@@ -23,6 +26,7 @@ beforeEach(async () => {
   ).run();
   await testEnv.DB.prepare('DELETE FROM coverage_daily').run();
   await testEnv.DB.prepare('DELETE FROM coverage_runs').run();
+  await testEnv.DB.prepare('DELETE FROM metrics').run();
 });
 
 describe('upsertCoverageRun — idempotency', () => {
@@ -98,5 +102,56 @@ describe('getLatestCoverage — coverage_daily fallback', () => {
 
     const result = await getLatestCoverage(testEnv.DB, 1, 'main');
     expect(result!.line_coverage).toBe(80.0);
+  });
+});
+
+describe('insertMetric — idempotent no-op (A11)', () => {
+  it('re-ingesting the same (project, commit, metric) leaves the original value untouched', async () => {
+    await insertMetric(testEnv.DB, 1, 'main', 'sha-metric', 'coverage', 70, '%');
+    await insertMetric(testEnv.DB, 1, 'main', 'sha-metric', 'coverage', 99, '%');
+
+    const { results } = await testEnv.DB.prepare(
+      `SELECT value FROM metrics WHERE project_id = 1 AND commit_sha = 'sha-metric' AND metric_name = 'coverage'`,
+    ).all<{ value: number }>();
+
+    expect(results).toHaveLength(1);
+    expect(results[0].value).toBe(70);
+  });
+});
+
+describe('getMetricsTrend', () => {
+  it('returns entries ordered most-recent-first, respecting the limit', async () => {
+    const stmts = Array.from({ length: 5 }, (_, i) =>
+      testEnv.DB.prepare(
+        `INSERT INTO metrics (project_id, branch, commit_sha, metric_name, value, unit, recorded_at)
+         VALUES (1, 'main', ?, 'coverage', ?, '%', ?)`,
+      ).bind(`sha-m${i}`, 50 + i, `2026-01-0${i + 1}`),
+    );
+    for (const s of stmts) await s.run();
+
+    const trend = await getMetricsTrend(testEnv.DB, 1, 'main', 'coverage', 3);
+
+    expect(trend).toHaveLength(3);
+    expect(trend[0].recorded_at).toBe('2026-01-05');
+    expect(trend.at(-1)!.recorded_at).toBe('2026-01-03');
+  });
+});
+
+describe('getLatestMetric', () => {
+  it('returns null when no rows exist', async () => {
+    const result = await getLatestMetric(testEnv.DB, 1, 'main', 'coverage');
+    expect(result).toBeNull();
+  });
+
+  it('returns the most recently recorded value', async () => {
+    await testEnv.DB.prepare(
+      `INSERT INTO metrics (project_id, branch, commit_sha, metric_name, value, unit, recorded_at)
+       VALUES (1, 'main', 'sha-old', 'coverage', 40, '%', '2026-01-01'),
+              (1, 'main', 'sha-new', 'coverage', 95, '%', '2026-01-10')`,
+    ).run();
+
+    const result = await getLatestMetric(testEnv.DB, 1, 'main', 'coverage');
+    expect(result?.value).toBe(95);
+    expect(result?.commit_sha).toBe('sha-new');
   });
 });
