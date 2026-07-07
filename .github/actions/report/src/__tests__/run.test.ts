@@ -331,6 +331,14 @@ describe('runPRCheck()', () => {
     expect(url).toContain('category=frontend');
   });
 
+  it('posts a Check Run named after the category, so backend and frontend do not collide', async () => {
+    mockFetch.mockResolvedValue(errFetchResponse(404));
+    await runPRCheck(WORKER, TOKEN, coverageMetric, 'owner', 'repo', 'frontend');
+    expect(mockChecksCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Coverage Tracker (frontend)' }),
+    );
+  });
+
   it('posts a failure Check Run when coverage is below min-coverage', async () => {
     vi.stubEnv('MIN_COVERAGE', '80'); // 75 < 80
     mockFetch.mockResolvedValue(errFetchResponse(404));
@@ -418,6 +426,13 @@ describe('postCheckRun()', () => {
       expect.objectContaining({ conclusion: 'success', name: 'Coverage Tracker' }),
     );
     expect(vi.mocked(core.info)).toHaveBeenCalledWith('Check Run posted: success');
+  });
+
+  it('suffixes the Check Run name with a non-default category', async () => {
+    await postCheckRun('ghs_mock', 'owner', 'repo', results, false, 'frontend');
+    expect(mockChecksCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Coverage Tracker (frontend)' }),
+    );
   });
 
   it('creates a failure Check Run when failed=true', async () => {
