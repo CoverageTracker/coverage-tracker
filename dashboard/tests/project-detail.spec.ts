@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from './coverage-fixture.js';
 import { mockApi } from './helpers.js';
 
 const MOCK_GROUPED_TREND_TWO_CATEGORIES = {

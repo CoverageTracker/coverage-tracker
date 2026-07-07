@@ -33,6 +33,10 @@ jobs:
   test-e2e:
     name: Playwright Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # mint OIDC token for Worker ingest
+      checks: write     # post PR Check Run
     defaults:
       run:
         working-directory: dashboard
@@ -63,8 +67,8 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Run Playwright tests
-        run: npx playwright test
+      - name: Run Playwright tests with coverage
+        run: npm run test:e2e:coverage
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -73,6 +77,13 @@ jobs:
           name: playwright-report
           path: dashboard/playwright-report/
           retention-days: 30
+
+      - name: Report coverage
+        uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.3.0
+        with:
+          worker-url: https://demo.coveragetracker.dev
+          coverage-path: dashboard/coverage/lcov.info
+          category: frontend
 
   backend-coverage:
     name: Worker Coverage
@@ -107,3 +118,4 @@ jobs:
         uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.3.0
         with:
           worker-url: https://demo.coveragetracker.dev
+          category: backend

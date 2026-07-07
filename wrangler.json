@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "coverage-tracker",
+	"name": "demo-coveragetracker-dev",
 	"main": "src/index.ts",
 	"send_metrics": false,
 	"compatibility_date": "2026-06-25",
