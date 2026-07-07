@@ -17,6 +17,10 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Needed because the release commit touches .github/workflows/ci.yml
+  # (bumping its action-usage pin) — the GitHub API rejects workflow-file
+  # writes from a token without this permission, even with contents: write.
+  workflows: write
 
 concurrency:
   group: release
@@ -78,10 +82,10 @@ jobs:
             (cd "$dir" && npm version "$VERSION" --no-git-tag-version --allow-same-version)
           done
 
-      - name: Update README action-usage pins
+      - name: Update action-usage pins
         run: |
           sed -i -E "s#(\.github/actions/report@v)[0-9]+\.[0-9]+\.[0-9]+#\1${VERSION}#g" \
-            README.md .github/actions/report/README.md
+            README.md .github/actions/report/README.md .github/workflows/ci.yml
 
       - name: Create release branch
         env:
@@ -100,7 +104,7 @@ jobs:
             package.json package-lock.json \
             dashboard/package.json dashboard/package-lock.json \
             .github/actions/report/package.json .github/actions/report/package-lock.json \
-            CHANGELOG.md README.md .github/actions/report/README.md
+            CHANGELOG.md README.md .github/actions/report/README.md .github/workflows/ci.yml
 
       - name: Open release PR
         env:
