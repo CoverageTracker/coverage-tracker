@@ -61,4 +61,22 @@ describe('rollupAndPrune', () => {
     ).first<{ cnt: number }>();
     expect(daily!.cnt).toBe(1);
   });
+
+  it('snapshots two categories aged out on the same day into separate daily rows', async () => {
+    const old = Math.floor(Date.now() / 1000) - 15 * 86400;
+    await testEnv.DB.prepare(
+      `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage)
+       VALUES (1, 'sha-be', 'main', 'backend', ?1, 80.0),
+              (1, 'sha-fe', 'main', 'frontend', ?1, 40.0)`,
+    ).bind(old).run();
+
+    await rollupAndPrune(testEnv);
+
+    const daily = await testEnv.DB.prepare(
+      `SELECT category, line_coverage FROM coverage_daily WHERE project_id = 1 ORDER BY category`,
+    ).all<{ category: string; line_coverage: number }>();
+    expect(daily.results).toHaveLength(2);
+    expect(daily.results[0]).toMatchObject({ category: 'backend', line_coverage: 80.0 });
+    expect(daily.results[1]).toMatchObject({ category: 'frontend', line_coverage: 40.0 });
+  });
 });

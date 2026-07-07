@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import { fetchProjects, fetchTrend } from '$lib/api';
+import { fetchProjects, fetchTrendByCategory } from '$lib/api';
 
 export const load: PageLoad = async ({ params, url, fetch }) => {
   const { owner, repo } = params;
@@ -15,9 +15,9 @@ export const load: PageLoad = async ({ params, url, fetch }) => {
 
   let trend;
   try {
-    trend = await fetchTrend(owner, repo, metric, branch, 100, fetch);
+    trend = await fetchTrendByCategory(owner, repo, metric, branch, 100, fetch);
   } catch {
-    trend = { project: fullSlug, branch, metric, data: [] };
+    trend = { project: fullSlug, branch, metric, categories: [] };
   }
 
   return { project, trend, metric, branch };

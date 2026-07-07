@@ -6,7 +6,10 @@ import type { Bindings, Variables } from '../types';
 
 const ci = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+const CATEGORY_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
 const CoverageReport = z.object({
+  category: z.string().regex(CATEGORY_RE, 'category must be alphanumeric with hyphens/underscores, max 64 chars').optional(),
   line_coverage: z.number().min(0).max(100),
   branch_coverage: z.number().min(0).max(100).optional(),
   cyclomatic: z.number().min(0).optional(),
@@ -46,6 +49,7 @@ ci.post('/coverage', requireOidc(), async (c) => {
 
   const data = result.data;
   await upsertCoverageRun(c.env.DB, project.id, sha, branch, Math.floor(Date.now() / 1000), {
+    category: data.category ?? 'default',
     line_coverage: data.line_coverage,
     branch_coverage: data.branch_coverage ?? null,
     cyclomatic: data.cyclomatic ?? null,

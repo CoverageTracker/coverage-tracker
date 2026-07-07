@@ -27,3 +27,17 @@ VALUES
   (1, 'aaa0013', 'main', strftime('%s', 'now', '-2 days'),  97.5, 0.0),
   (1, 'aaa0014', 'main', strftime('%s', 'now', '-1 day'),   98.0, 0.0),
   (1, 'aaa0015', 'main', strftime('%s', 'now'),             98.1, 0.0);
+
+-- Second category ("frontend") demonstrating multiple stacked report series
+-- per project. The rows above have no explicit category and default to
+-- 'default'; these are tagged separately so the dashboard renders two
+-- stacked charts under the Coverage tab.
+INSERT OR IGNORE INTO coverage_runs
+  (project_id, commit_sha, branch, category, ran_at, line_coverage, duplication_pct)
+VALUES
+  (1, 'bbb0001', 'main', 'frontend', strftime('%s', 'now', '-14 days'), 62.0, 3.5),
+  (1, 'bbb0002', 'main', 'frontend', strftime('%s', 'now', '-11 days'), 65.4, 3.2),
+  (1, 'bbb0003', 'main', 'frontend', strftime('%s', 'now', '-8 days'),  68.9, 2.8),
+  (1, 'bbb0004', 'main', 'frontend', strftime('%s', 'now', '-5 days'),  71.2, 2.1),
+  (1, 'bbb0005', 'main', 'frontend', strftime('%s', 'now', '-2 days'),  73.6, 1.9),
+  (1, 'bbb0006', 'main', 'frontend', strftime('%s', 'now'),             75.0, 1.7);

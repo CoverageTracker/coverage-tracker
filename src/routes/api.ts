@@ -1,6 +1,12 @@
 import { Hono } from 'hono';
 import { requireAccess } from '../middleware/access';
-import { listProjectsWithOwners, getProjectBySlug, getCoverageTrend, pickColumnValue } from '../lib/db';
+import {
+  listProjectsWithOwners,
+  getProjectBySlug,
+  getCoverageTrend,
+  getCoverageTrendGrouped,
+  pickColumnValue,
+} from '../lib/db';
 import { metricToColumn } from '../lib/metrics';
 import type { Bindings, Variables } from '../types';
 
@@ -26,7 +32,8 @@ api.get('/projects/:owner/:repo/metrics', requireAccess(), async (c) => {
   const mapping = metricToColumn(metric);
   if (!mapping) return c.json({ error: `Unknown metric: ${metric}` }, 400);
 
-  const points = await getCoverageTrend(c.env.DB, project.id, branch, limit);
+  const category = c.req.query('category') ?? 'default';
+  const points = await getCoverageTrend(c.env.DB, project.id, branch, limit, category);
   const data = points
     .map((p) => {
       const value = pickColumnValue(p, mapping.column);
@@ -41,6 +48,37 @@ api.get('/projects/:owner/:repo/metrics', requireAccess(), async (c) => {
     .filter((p): p is NonNullable<typeof p> => p !== null);
 
   return c.json({ project: fullSlug, branch, metric, data });
+});
+
+/** Trend data for one repo+branch+metric, grouped by category. Access-gated. */
+api.get('/projects/:owner/:repo/metrics/categories', requireAccess(), async (c) => {
+  const fullSlug = `${c.req.param('owner')}/${c.req.param('repo')}`;
+  const project = await getProjectBySlug(c.env.DB, fullSlug);
+  if (!project) return c.json({ error: 'Not found' }, 404);
+
+  const metric = c.req.query('metric') ?? 'coverage';
+  const branch = c.req.query('branch') ?? project.default_branch;
+  if (branch.length > 255) return c.json({ error: 'Invalid branch' }, 400);
+  const limit = Math.min(Number(c.req.query('limit') ?? '100'), 1000);
+
+  const mapping = metricToColumn(metric);
+  if (!mapping) return c.json({ error: `Unknown metric: ${metric}` }, 400);
+
+  const points = await getCoverageTrendGrouped(c.env.DB, project.id, branch, limit);
+  const byCategory = new Map<string, Array<{ commit_sha: string; value: number; unit: string; recorded_at: string }>>();
+  for (const p of points) {
+    const value = pickColumnValue(p, mapping.column);
+    if (value === null) continue;
+    const arr = byCategory.get(p.category) ?? [];
+    arr.push({ commit_sha: p.commit_sha, value, unit: mapping.unit, recorded_at: p.recorded_at });
+    byCategory.set(p.category, arr);
+  }
+
+  const categories = [...byCategory.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, data]) => ({ category, data }));
+
+  return c.json({ project: fullSlug, branch, metric, categories });
 });
 
 export default api;

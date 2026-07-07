@@ -86,6 +86,7 @@ export interface CoverageRun {
   project_id: number;
   commit_sha: string;
   branch: string;
+  category: string;
   ran_at: number;
   line_coverage: number;
   branch_coverage: number | null;
@@ -97,6 +98,7 @@ export interface CoverageRun {
 
 export interface CoverageDaily {
   project_id: number;
+  category: string;
   day: string;
   line_coverage: number;
   branch_coverage: number | null;

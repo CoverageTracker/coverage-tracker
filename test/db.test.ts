@@ -3,6 +3,7 @@ import { env } from 'cloudflare:test';
 import {
   upsertCoverageRun,
   getCoverageTrend,
+  getCoverageTrendGrouped,
   getLatestCoverage,
   insertMetric,
   getMetricsTrend,
@@ -64,6 +65,83 @@ describe('getCoverageTrend — most-recent-N ordering', () => {
     for (let i = 1; i < trend.length; i++) {
       expect(trend[i].recorded_at >= trend[i - 1].recorded_at).toBe(true);
     }
+  });
+});
+
+describe('upsertCoverageRun — category isolation', () => {
+  it('same commit_sha under two categories creates two rows, not a collision', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-shared', 'main', NOW, {
+      category: 'backend',
+      line_coverage: 70,
+    });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-shared', 'main', NOW, {
+      category: 'frontend',
+      line_coverage: 40,
+    });
+
+    const { results } = await testEnv.DB.prepare(
+      `SELECT category, line_coverage FROM coverage_runs WHERE project_id = 1 AND commit_sha = 'sha-shared' ORDER BY category`,
+    ).all<{ category: string; line_coverage: number }>();
+
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({ category: 'backend', line_coverage: 70 });
+    expect(results[1]).toMatchObject({ category: 'frontend', line_coverage: 40 });
+  });
+
+  it('omitting category defaults to "default"', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-nocat', 'main', NOW, { line_coverage: 55 });
+
+    const row = await testEnv.DB.prepare(
+      `SELECT category FROM coverage_runs WHERE project_id = 1 AND commit_sha = 'sha-nocat'`,
+    ).first<{ category: string }>();
+
+    expect(row?.category).toBe('default');
+  });
+});
+
+describe('getCoverageTrend — category filter', () => {
+  it('only returns rows for the requested category', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-be', 'main', NOW, {
+      category: 'backend',
+      line_coverage: 90,
+    });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-fe', 'main', NOW, {
+      category: 'frontend',
+      line_coverage: 30,
+    });
+
+    const backendTrend = await getCoverageTrend(testEnv.DB, 1, 'main', 20, 'backend');
+    expect(backendTrend).toHaveLength(1);
+    expect(backendTrend[0].line_coverage).toBe(90);
+
+    const frontendTrend = await getCoverageTrend(testEnv.DB, 1, 'main', 20, 'frontend');
+    expect(frontendTrend).toHaveLength(1);
+    expect(frontendTrend[0].line_coverage).toBe(30);
+  });
+});
+
+describe('getCoverageTrendGrouped', () => {
+  it('returns every category with data, each capped at limit independently', async () => {
+    for (let i = 0; i < 5; i++) {
+      await upsertCoverageRun(testEnv.DB, 1, `sha-be-${i}`, 'main', NOW - (4 - i) * DAY, {
+        category: 'backend',
+        line_coverage: 80 + i,
+      });
+    }
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-fe-0', 'main', NOW, {
+      category: 'frontend',
+      line_coverage: 20,
+    });
+
+    const grouped = await getCoverageTrendGrouped(testEnv.DB, 1, 'main', 3);
+
+    const backend = grouped.filter((r) => r.category === 'backend');
+    const frontend = grouped.filter((r) => r.category === 'frontend');
+
+    expect(backend).toHaveLength(3);
+    expect(backend.at(-1)!.line_coverage).toBe(84); // most recent backend row
+    expect(frontend).toHaveLength(1);
+    expect(frontend[0].line_coverage).toBe(20);
   });
 });
 

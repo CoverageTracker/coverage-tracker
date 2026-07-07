@@ -159,7 +159,7 @@ describe('run()', () => {
   beforeEach(() => {
     vi.mocked(core.getIDToken).mockResolvedValue('mock-oidc-token');
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(METRICS_ONE as unknown as Buffer);
+    vi.mocked(fs.readFileSync).mockReturnValue(METRICS_ONE as unknown as ReturnType<typeof fs.readFileSync>);
     mockPayload.repository = { default_branch: 'main' };
     mockChecksCreate.mockResolvedValue({});
     mockFetch.mockResolvedValue(okFetchResponse({ ok: true, inserted: 1 }));
@@ -195,7 +195,7 @@ describe('run()', () => {
   });
 
   it('warns and returns early when metrics array is empty', async () => {
-    vi.mocked(fs.readFileSync).mockReturnValue(METRICS_EMPTY as unknown as Buffer);
+    vi.mocked(fs.readFileSync).mockReturnValue(METRICS_EMPTY as unknown as ReturnType<typeof fs.readFileSync>);
     await run();
     expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
       'No metrics collected — skipping report.',
@@ -271,9 +271,17 @@ describe('runIngest()', () => {
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
     // coverage → line_coverage, duplication → duplication_pct
-    expect(body).toEqual({ line_coverage: 85, duplication_pct: 0 });
+    expect(body).toEqual({ category: 'default', line_coverage: 85, duplication_pct: 0 });
     expect(body).not.toHaveProperty('metrics');
     expect(body).not.toHaveProperty('repository');
+  });
+
+  it('includes an explicit category in the request body when provided', async () => {
+    mockFetch.mockResolvedValue(okFetchResponse({}));
+    await runIngest('https://worker.example.com', 'mock-token', metrics, 'frontend');
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.category).toBe('frontend');
   });
 });
 
@@ -307,6 +315,20 @@ describe('runPRCheck()', () => {
       expect.objectContaining({ conclusion: 'success' }),
     );
     expect(vi.mocked(core.setFailed)).not.toHaveBeenCalled();
+  });
+
+  it('includes the category in the baseline fetch URL, defaulting to "default"', async () => {
+    mockFetch.mockResolvedValue(errFetchResponse(404));
+    await runPRCheck(WORKER, TOKEN, coverageMetric, 'owner', 'repo');
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain('category=default');
+  });
+
+  it('includes an explicit category in the baseline fetch URL when provided', async () => {
+    mockFetch.mockResolvedValue(errFetchResponse(404));
+    await runPRCheck(WORKER, TOKEN, coverageMetric, 'owner', 'repo', 'frontend');
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain('category=frontend');
   });
 
   it('posts a failure Check Run when coverage is below min-coverage', async () => {

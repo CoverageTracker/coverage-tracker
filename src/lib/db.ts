@@ -201,6 +201,7 @@ export async function upsertCoverageRun(
   branch: string,
   ranAt: number,
   fields: {
+    category?: string;
     line_coverage: number;
     branch_coverage?: number | null;
     cyclomatic?: number | null;
@@ -209,13 +210,14 @@ export async function upsertCoverageRun(
     maintainability?: number | null;
   },
 ): Promise<void> {
+  const category = fields.category ?? 'default';
   await db
     .prepare(
       `INSERT INTO coverage_runs
-         (project_id, commit_sha, branch, ran_at, line_coverage, branch_coverage,
+         (project_id, commit_sha, branch, category, ran_at, line_coverage, branch_coverage,
           cyclomatic, cognitive, duplication_pct, maintainability)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(project_id, commit_sha) DO UPDATE SET
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(project_id, category, commit_sha) DO UPDATE SET
          branch          = excluded.branch,
          ran_at          = excluded.ran_at,
          line_coverage   = excluded.line_coverage,
@@ -229,6 +231,7 @@ export async function upsertCoverageRun(
       projectId,
       commitSha,
       branch,
+      category,
       ranAt,
       fields.line_coverage,
       fields.branch_coverage ?? null,
@@ -244,15 +247,16 @@ export async function getLatestCoverageRun(
   db: D1Database,
   projectId: number,
   branch: string,
+  category: string = 'default',
 ): Promise<CoverageRun | null> {
   const row = await db
     .prepare(
       `SELECT * FROM coverage_runs
-       WHERE project_id = ? AND branch = ?
+       WHERE project_id = ? AND branch = ? AND category = ?
        ORDER BY ran_at DESC
        LIMIT 1`,
     )
-    .bind(projectId, branch)
+    .bind(projectId, branch, category)
     .first<CoverageRun>();
   return row ?? null;
 }
@@ -263,7 +267,7 @@ type LatestCoverage = Pick<
 >;
 
 /**
- * Returns the most recent coverage values for a project/branch.
+ * Returns the most recent coverage values for a project/branch/category.
  * Checks coverage_runs first; falls back to coverage_daily for dormant repos
  * whose raw runs have been pruned by the daily rollup cron.
  */
@@ -271,8 +275,9 @@ export async function getLatestCoverage(
   db: D1Database,
   projectId: number,
   branch: string,
+  category: string = 'default',
 ): Promise<LatestCoverage | null> {
-  const run = await getLatestCoverageRun(db, projectId, branch);
+  const run = await getLatestCoverageRun(db, projectId, branch, category);
   if (run) return run;
 
   const daily = await db
@@ -280,11 +285,11 @@ export async function getLatestCoverage(
       `SELECT 'aggregated' AS commit_sha,
               line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
        FROM coverage_daily
-       WHERE project_id = ?
+       WHERE project_id = ? AND category = ?
        ORDER BY day DESC
        LIMIT 1`,
     )
-    .bind(projectId)
+    .bind(projectId, category)
     .first<LatestCoverage>();
   return daily ?? null;
 }
@@ -305,6 +310,7 @@ export async function getCoverageTrend(
   projectId: number,
   branch: string,
   limit: number,
+  category: string = 'default',
 ): Promise<CoverageTrendPoint[]> {
   // Take the most-recent `limit` days across both tables, then reverse to ASC for display.
   const { results } = await db
@@ -316,11 +322,11 @@ export async function getCoverageTrend(
                 day AS recorded_at,
                 line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
          FROM coverage_daily
-         WHERE project_id = ?1
+         WHERE project_id = ?1 AND category = ?4
            AND day NOT IN (
              SELECT DISTINCT strftime('%Y-%m-%d', ran_at, 'unixepoch')
              FROM coverage_runs
-             WHERE project_id = ?1 AND branch = ?2
+             WHERE project_id = ?1 AND branch = ?2 AND category = ?4
            )
 
          UNION ALL
@@ -335,7 +341,7 @@ export async function getCoverageTrend(
                     ORDER BY ran_at DESC
                   ) AS rn
            FROM coverage_runs
-           WHERE project_id = ?1 AND branch = ?2
+           WHERE project_id = ?1 AND branch = ?2 AND category = ?4
          )
          WHERE rn = 1
 
@@ -344,8 +350,69 @@ export async function getCoverageTrend(
        )
        ORDER BY recorded_at ASC`,
     )
-    .bind(projectId, branch, limit)
+    .bind(projectId, branch, limit, category)
     .all<CoverageTrendPoint>();
+  return results;
+}
+
+export interface CoverageTrendPointWithCategory extends CoverageTrendPoint {
+  category: string;
+}
+
+/**
+ * Like getCoverageTrend, but returns every category's series in one query,
+ * each capped independently at `limit` (not a flat limit split across
+ * categories). Doubles as category discovery — whichever categories have
+ * data for this project/branch simply appear in the result.
+ */
+export async function getCoverageTrendGrouped(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  limit: number,
+): Promise<CoverageTrendPointWithCategory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT category, commit_sha, recorded_at,
+              line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+       FROM (
+         SELECT *,
+                ROW_NUMBER() OVER (
+                  PARTITION BY category ORDER BY recorded_at DESC
+                ) AS rn2
+         FROM (
+           SELECT cd.category AS category, 'aggregated' AS commit_sha, cd.day AS recorded_at,
+                  cd.line_coverage, cd.branch_coverage, cd.cyclomatic, cd.cognitive, cd.duplication_pct, cd.maintainability
+           FROM coverage_daily cd
+           WHERE cd.project_id = ?1
+             AND cd.day NOT IN (
+               SELECT DISTINCT strftime('%Y-%m-%d', ran_at, 'unixepoch')
+               FROM coverage_runs
+               WHERE project_id = ?1 AND branch = ?2 AND category = cd.category
+             )
+
+           UNION ALL
+
+           SELECT category, commit_sha,
+                  strftime('%Y-%m-%d', ran_at, 'unixepoch') AS recorded_at,
+                  line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+           FROM (
+             SELECT *,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY category, strftime('%Y-%m-%d', ran_at, 'unixepoch')
+                      ORDER BY ran_at DESC
+                    ) AS rn
+             FROM coverage_runs
+             WHERE project_id = ?1 AND branch = ?2
+           )
+           WHERE rn = 1
+         )
+       )
+       WHERE rn2 <= ?3
+       ORDER BY category ASC, recorded_at ASC`,
+    )
+    .bind(projectId, branch, limit)
+    .all<CoverageTrendPointWithCategory>();
   return results;
 }
 

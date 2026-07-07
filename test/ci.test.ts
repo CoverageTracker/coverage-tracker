@@ -124,4 +124,42 @@ describe('POST /api/ci/coverage', () => {
     expect(results).toHaveLength(1);
     expect(results[0].line_coverage).toBe(99);
   });
+
+  it('persists a category field and defaults to "default" when omitted', async () => {
+    const token = await signOidcJwt({ sha: 'e'.repeat(40) });
+    const res = await fetchCI({ line_coverage: 92.5, category: 'frontend' }, token);
+    expect(res.status).toBe(202);
+
+    const row = await getLatestCoverageRun(testEnv.DB, 1, 'main', 'frontend');
+    expect(row).not.toBeNull();
+    expect(row!.category).toBe('frontend');
+
+    const defaultRow = await getLatestCoverageRun(testEnv.DB, 1, 'main', 'default');
+    expect(defaultRow).toBeNull();
+  });
+
+  it('same commit under two categories creates two rows, not one', async () => {
+    const sha = 'f'.repeat(40);
+    const backendToken = await signOidcJwt({ sha });
+    const frontendToken = await signOidcJwt({ sha });
+
+    await fetchCI({ line_coverage: 90, category: 'backend' }, backendToken);
+    await fetchCI({ line_coverage: 40, category: 'frontend' }, frontendToken);
+
+    const { results } = await testEnv.DB.prepare(
+      'SELECT category, line_coverage FROM coverage_runs WHERE project_id = 1 AND commit_sha = ? ORDER BY category',
+    )
+      .bind(sha)
+      .all<{ category: string; line_coverage: number }>();
+
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({ category: 'backend', line_coverage: 90 });
+    expect(results[1]).toMatchObject({ category: 'frontend', line_coverage: 40 });
+  });
+
+  it('rejects an invalid category with 422', async () => {
+    const token = await signOidcJwt({});
+    const res = await fetchCI({ line_coverage: 90, category: 'Not Valid!' }, token);
+    expect(res.status).toBe(422);
+  });
 });

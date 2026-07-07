@@ -67,7 +67,11 @@ export async function run(): Promise<void> {
  * to ingest (push) or PR check. Shared by the legacy metrics-file entrypoint
  * (`run`) and the parser-pipeline entrypoint (`src/index.ts`).
  */
-export async function report(workerUrl: string, metrics: Metric[]): Promise<void> {
+export async function report(
+  workerUrl: string,
+  metrics: Metric[],
+  category: string = 'default',
+): Promise<void> {
   workerUrl = workerUrl.replace(/\/$/, '');
 
   core.info(`Reporting ${metrics.length} metric(s): ${metrics.map((m) => m.name).join(', ')}`);
@@ -120,17 +124,22 @@ export async function report(workerUrl: string, metrics: Metric[]): Promise<void
 
   if (isPR) {
     const [owner, repo] = (process.env.GITHUB_REPOSITORY ?? '').split('/');
-    await runPRCheck(workerUrl, oidcToken, metrics, owner, repo);
+    await runPRCheck(workerUrl, oidcToken, metrics, owner, repo, category);
   } else {
-    await runIngest(workerUrl, oidcToken, metrics);
+    await runIngest(workerUrl, oidcToken, metrics, category);
   }
 }
 
 // ── Push path: ingest metrics ─────────────────────────────────────────────
 
-export async function runIngest(workerUrl: string, oidcToken: string, metrics: Metric[]): Promise<void> {
+export async function runIngest(
+  workerUrl: string,
+  oidcToken: string,
+  metrics: Metric[],
+  category: string = 'default',
+): Promise<void> {
   // Map legacy metrics array to typed coverage fields
-  const body: Record<string, number> = {};
+  const body: Record<string, number | string> = { category };
   for (const m of metrics) {
     const field = METRIC_TO_FIELD[m.name];
     if (field) body[field] = m.value;
@@ -162,6 +171,7 @@ export async function runPRCheck(
   metrics: Metric[],
   owner: string,
   repo: string,
+  category: string = 'default',
 ): Promise<void> {
   const minCoverage = parseThreshold(process.env.MIN_COVERAGE);
   const maxCoverageDrop = parseThreshold(process.env.MAX_COVERAGE_DROP);
@@ -171,7 +181,7 @@ export async function runPRCheck(
   // Fetch baselines for all collected metrics
   const baselines: Record<string, number> = {};
   for (const m of metrics) {
-    const url = `${workerUrl}/api/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
+    const url = `${workerUrl}/api/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}&category=${encodeURIComponent(category)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${oidcToken}` } });
     if (res.ok) {
       try {
