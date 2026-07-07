@@ -24703,7 +24703,7 @@ var METRIC_TO_FIELD = {
   duplication: "duplication_pct",
   maintainability: "maintainability"
 };
-async function report(workerUrl, metrics) {
+async function report(workerUrl, metrics, category = "default") {
   workerUrl = workerUrl.replace(/\/$/, "");
   info(`Reporting ${metrics.length} metric(s): ${metrics.map((m) => m.name).join(", ")}`);
   const eventName = process.env.GITHUB_EVENT_NAME ?? "";
@@ -24739,13 +24739,13 @@ async function report(workerUrl, metrics) {
   }
   if (isPR) {
     const [owner, repo] = (process.env.GITHUB_REPOSITORY ?? "").split("/");
-    await runPRCheck(workerUrl, oidcToken, metrics, owner, repo);
+    await runPRCheck(workerUrl, oidcToken, metrics, owner, repo, category);
   } else {
-    await runIngest(workerUrl, oidcToken, metrics);
+    await runIngest(workerUrl, oidcToken, metrics, category);
   }
 }
-async function runIngest(workerUrl, oidcToken, metrics) {
-  const body = {};
+async function runIngest(workerUrl, oidcToken, metrics, category = "default") {
+  const body = { category };
   for (const m of metrics) {
     const field = METRIC_TO_FIELD[m.name];
     if (field) body[field] = m.value;
@@ -24765,14 +24765,14 @@ async function runIngest(workerUrl, oidcToken, metrics) {
   }
   info("Coverage report submitted.");
 }
-async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo) {
+async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo, category = "default") {
   const minCoverage = parseThreshold(process.env.MIN_COVERAGE);
   const maxCoverageDrop = parseThreshold(process.env.MAX_COVERAGE_DROP);
   const maxComplexity = parseThreshold(process.env.MAX_COMPLEXITY);
   const maxDuplication = parseThreshold(process.env.MAX_DUPLICATION);
   const baselines = {};
   for (const m of metrics) {
-    const url = `${workerUrl}/api/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}`;
+    const url = `${workerUrl}/api/baseline/${owner}/${repo}?metric=${encodeURIComponent(m.name)}&category=${encodeURIComponent(category)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${oidcToken}` } });
     if (res.ok) {
       try {
@@ -24823,7 +24823,7 @@ async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo) {
   }
   const githubToken = process.env.GITHUB_TOKEN ?? "";
   if (githubToken) {
-    await postCheckRun(githubToken, owner, repo, results, anyFailed);
+    await postCheckRun(githubToken, owner, repo, results, anyFailed, category);
   } else {
     warning("GITHUB_TOKEN not available \u2014 cannot post Check Run.");
   }
@@ -24831,17 +24831,18 @@ async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo) {
     setFailed("One or more coverage thresholds were not met.");
   }
 }
-async function postCheckRun(githubToken, owner, repo, results, failed) {
+async function postCheckRun(githubToken, owner, repo, results, failed, category = "default") {
   const octokit = getOctokit(githubToken);
   const headSha = context2.payload.pull_request?.head?.sha ?? context2.sha;
   const summary2 = buildSummary(results);
   const conclusion = failed ? "failure" : "success";
   const title = failed ? "Coverage thresholds not met" : "All coverage thresholds passed";
+  const name = category === "default" ? "Coverage Tracker" : `Coverage Tracker (${category})`;
   try {
     await octokit.rest.checks.create({
       owner,
       repo,
-      name: "Coverage Tracker",
+      name,
       head_sha: headSha,
       status: "completed",
       conclusion,
@@ -30383,7 +30384,8 @@ async function main() {
     metrics.push({ name: "duplication", value: dup.duplication_pct, unit: "%" });
     info(`Duplication from ${duplicationPath}: ${dup.duplication_pct}%`);
   }
-  await report(workerUrl, metrics);
+  const category = getInput("category") || "default";
+  await report(workerUrl, metrics, category);
 }
 function warnCoberturaTool() {
   const tool = getInput("coverage-tool").trim().toLowerCase();

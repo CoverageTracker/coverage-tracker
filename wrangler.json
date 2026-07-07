@@ -16,7 +16,7 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "coverage",
+			"database_name": "coverage-demo",
 			"migrations_dir": "migrations"
 		}
 	],

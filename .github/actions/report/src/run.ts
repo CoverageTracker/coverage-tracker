@@ -243,7 +243,7 @@ export async function runPRCheck(
   // Post Check Run using GITHUB_TOKEN (Option A — Appendix B.3)
   const githubToken = process.env.GITHUB_TOKEN ?? '';
   if (githubToken) {
-    await postCheckRun(githubToken, owner, repo, results, anyFailed);
+    await postCheckRun(githubToken, owner, repo, results, anyFailed, category);
   } else {
     core.warning('GITHUB_TOKEN not available — cannot post Check Run.');
   }
@@ -259,6 +259,7 @@ export async function postCheckRun(
   repo: string,
   results: ThresholdResult[],
   failed: boolean,
+  category: string = 'default',
 ): Promise<void> {
   const octokit = github.getOctokit(githubToken);
 
@@ -270,12 +271,15 @@ export async function postCheckRun(
   const summary = buildSummary(results);
   const conclusion = failed ? 'failure' : 'success';
   const title = failed ? 'Coverage thresholds not met' : 'All coverage thresholds passed';
+  // "default" keeps the pre-category check name so single-series repos see no
+  // change; other categories get their own distinct, filterable check name.
+  const name = category === 'default' ? 'Coverage Tracker' : `Coverage Tracker (${category})`;
 
   try {
     await octokit.rest.checks.create({
       owner,
       repo,
-      name: 'Coverage Tracker',
+      name,
       head_sha: headSha,
       status: 'completed',
       conclusion,
