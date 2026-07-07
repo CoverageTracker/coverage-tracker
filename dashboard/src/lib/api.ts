@@ -1,4 +1,4 @@
-import type { ProjectRow, TrendResponse } from './types';
+import type { ProjectRow, TrendResponse, GroupedTrendResponse } from './types';
 
 export async function fetchProjects(fetchFn: typeof fetch = fetch): Promise<ProjectRow[]> {
   const res = await fetchFn('/api/projects', { redirect: 'manual' });
@@ -20,4 +20,20 @@ export async function fetchTrend(
   });
   if (!res.ok) throw new Error(`Failed to fetch trend: HTTP ${res.status}`);
   return res.json() as Promise<TrendResponse>;
+}
+
+export async function fetchTrendByCategory(
+  owner: string,
+  repo: string,
+  metric: string,
+  branch: string,
+  limit: number,
+  fetchFn: typeof fetch = fetch,
+): Promise<GroupedTrendResponse> {
+  const params = new URLSearchParams({ metric, branch, limit: String(limit) });
+  const res = await fetchFn(`/api/projects/${owner}/${repo}/metrics/categories?${params}`, {
+    redirect: 'manual',
+  });
+  if (!res.ok) throw new Error(`Failed to fetch trend: HTTP ${res.status}`);
+  return res.json() as Promise<GroupedTrendResponse>;
 }

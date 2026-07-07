@@ -27,18 +27,6 @@
     branchInput = data.branch;
   });
 
-  // Delta badge: latest value vs. previous point
-  const latestValue = $derived(
-    data.trend.data.length > 0 ? data.trend.data[data.trend.data.length - 1].value : null,
-  );
-  const prevValue = $derived(
-    data.trend.data.length > 1 ? data.trend.data[data.trend.data.length - 2].value : null,
-  );
-  const delta = $derived(
-    latestValue !== null && prevValue !== null ? latestValue - prevValue : null,
-  );
-  const unit = $derived(data.trend.data[0]?.unit ?? '');
-
   // Chart color for the active metric
   const metricChartColor = $derived(
     theme.tokens.chart[METRICS.indexOf(data.metric as (typeof METRICS)[number])] ??
@@ -99,41 +87,55 @@
     </div>
   </div>
 
-  {#if data.trend.data.length === 0}
+  {#if data.trend.categories.length === 0}
     <p class="empty">
       No data for <code>{data.metric}</code> on branch <code>{data.branch}</code> yet.
     </p>
   {:else if browser}
-    <div class="trend-card">
-      <div class="trend-card-header">
-        <div class="trend-card-meta">
-          <span class="trend-title">{data.metric.charAt(0).toUpperCase() + data.metric.slice(1)} over time</span>
-          <span class="trend-desc">Last 30 days · {data.branch}</span>
-        </div>
-        <div class="trend-card-value">
-          {#if latestValue !== null}
-            <span class="big-value">{latestValue.toFixed(1)}{unit}</span>
-            {#if delta !== null}
-              <span
-                class="delta-badge"
-                style="background:{metricChartColor}28; color:{metricChartColor}"
-                aria-label="{delta >= 0 ? 'up' : 'down'} {Math.abs(delta).toFixed(1)}{unit}"
+    <div class="trend-stack">
+      {#each data.trend.categories as cat (cat.category)}
+        {@const latestValue = cat.data.length > 0 ? cat.data[cat.data.length - 1].value : null}
+        {@const prevValue = cat.data.length > 1 ? cat.data[cat.data.length - 2].value : null}
+        {@const delta = latestValue !== null && prevValue !== null ? latestValue - prevValue : null}
+        {@const unit = cat.data[0]?.unit ?? ''}
+        <div class="trend-card">
+          <div class="trend-card-header">
+            <div class="trend-card-meta">
+              <span class="trend-title"
+                >{cat.category} — {data.metric.charAt(0).toUpperCase() + data.metric.slice(1)} over time</span
               >
-                {delta >= 0 ? '▲' : '▼'} {delta >= 0 ? '+' : ''}{delta.toFixed(1)}{unit}
-              </span>
-            {/if}
+              <span class="trend-desc">Last 30 days · {data.branch}</span>
+            </div>
+            <div class="trend-card-value">
+              {#if latestValue !== null}
+                <span class="big-value">{latestValue.toFixed(1)}{unit}</span>
+                {#if delta !== null}
+                  <span
+                    class="delta-badge"
+                    style="background:{metricChartColor}28; color:{metricChartColor}"
+                    aria-label="{delta >= 0 ? 'up' : 'down'} {Math.abs(delta).toFixed(1)}{unit}"
+                  >
+                    {delta >= 0 ? '▲' : '▼'} {delta >= 0 ? '+' : ''}{delta.toFixed(1)}{unit}
+                  </span>
+                {/if}
+              {/if}
+            </div>
+          </div>
+          {#if cat.data.length === 0}
+            <p class="empty">No data for category <code>{cat.category}</code> yet.</p>
+          {:else}
+            <TrendChart
+              data={cat.data}
+              metric={data.metric}
+              unit={unit}
+              color={metricChartColor}
+              borderColor={theme.tokens.border}
+              mutedColor={theme.tokens.muted}
+              textColor={theme.tokens.text}
+            />
           {/if}
         </div>
-      </div>
-      <TrendChart
-        data={data.trend.data}
-        metric={data.metric}
-        unit={unit}
-        color={metricChartColor}
-        borderColor={theme.tokens.border}
-        mutedColor={theme.tokens.muted}
-        textColor={theme.tokens.text}
-      />
+      {/each}
     </div>
   {/if}
 
@@ -308,6 +310,13 @@
 
   .branch-form button[type='submit']:hover {
     opacity: 0.9;
+  }
+
+  /* Trend stack: one full-width chart per category, stacked vertically */
+  .trend-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
 
   /* Trend card */

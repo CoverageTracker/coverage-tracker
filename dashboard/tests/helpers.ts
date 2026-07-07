@@ -22,6 +22,13 @@ export const MOCK_TREND_EMPTY = {
   data: [],
 };
 
+export const MOCK_GROUPED_TREND_EMPTY = {
+  project: 'testorg/repo',
+  branch: 'main',
+  metric: 'coverage',
+  categories: [],
+};
+
 /**
  * Intercepts all /api/* requests so tests run without a live Worker backend.
  * Register this before page.goto() so routes are in place before any fetch fires.
@@ -35,7 +42,13 @@ export async function mockApi(page: Page): Promise<void> {
   await page.route('**/api/**', (route) =>
     route.fulfill({ status: 404, body: 'Not found' }),
   );
-  // Specific routes registered last = highest priority (override the catch-all)
+  // Specific routes registered last = highest priority (override the catch-all).
+  // metrics/categories is registered before metrics* since Playwright glob `*`
+  // does not cross `/` — the two never actually collide, but keeping the more
+  // specific path first mirrors the LIFO-priority convention documented above.
+  await page.route('**/api/projects/testorg/repo/metrics/categories*', (route) =>
+    route.fulfill({ json: MOCK_GROUPED_TREND_EMPTY }),
+  );
   await page.route('**/api/projects/testorg/repo/metrics*', (route) =>
     route.fulfill({ json: MOCK_TREND_EMPTY }),
   );

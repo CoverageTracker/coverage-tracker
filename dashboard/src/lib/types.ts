@@ -24,6 +24,18 @@ export interface TrendResponse {
   data: MetricPoint[];
 }
 
+export interface CategoryTrend {
+  category: string;
+  data: MetricPoint[];
+}
+
+export interface GroupedTrendResponse {
+  project: string;
+  branch: string;
+  metric: string;
+  categories: CategoryTrend[];
+}
+
 export type MetricName = 'coverage' | 'complexity' | 'duplication';
 
 export const METRICS: MetricName[] = ['coverage', 'complexity', 'duplication'];

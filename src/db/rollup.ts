@@ -14,26 +14,26 @@ export async function rollupAndPrune(env: Bindings): Promise<void> {
     // using the last run of that day (ROW_NUMBER window).
     env.DB.prepare(
       `INSERT INTO coverage_daily
-         (project_id, day, line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability, run_count)
+         (project_id, category, day, line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability, run_count)
        SELECT
-         project_id,
+         project_id, category,
          strftime('%Y-%m-%d', ran_at, 'unixepoch') AS day,
          line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability,
          run_count
        FROM (
          SELECT *,
                 ROW_NUMBER() OVER (
-                  PARTITION BY project_id, strftime('%Y-%m-%d', ran_at, 'unixepoch')
+                  PARTITION BY project_id, category, strftime('%Y-%m-%d', ran_at, 'unixepoch')
                   ORDER BY ran_at DESC
                 ) AS rn,
                 COUNT(*) OVER (
-                  PARTITION BY project_id, strftime('%Y-%m-%d', ran_at, 'unixepoch')
+                  PARTITION BY project_id, category, strftime('%Y-%m-%d', ran_at, 'unixepoch')
                 ) AS run_count
          FROM coverage_runs
          WHERE ran_at < ?1
        )
        WHERE rn = 1
-       ON CONFLICT(project_id, day) DO UPDATE SET
+       ON CONFLICT(project_id, category, day) DO UPDATE SET
          line_coverage   = excluded.line_coverage,
          branch_coverage = excluded.branch_coverage,
          cyclomatic      = excluded.cyclomatic,

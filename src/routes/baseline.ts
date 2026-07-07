@@ -31,7 +31,8 @@ baseline.get('/:owner/:repo', requireOidc(), async (c) => {
   const mapping = metricToColumn(metricName);
   if (!mapping) return c.json({ error: `Unknown metric: ${metricName}` }, 400);
 
-  const run = await getLatestCoverage(c.env.DB, project.id, branch);
+  const category = c.req.query('category') ?? 'default';
+  const run = await getLatestCoverage(c.env.DB, project.id, branch, category);
   if (!run) return c.json({ error: 'No data for this metric/branch' }, 404);
 
   const value = pickMetricValue(run, mapping.column);

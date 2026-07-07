@@ -39,6 +39,17 @@ inputs:
     required: false
     default: ''
 
+  category:
+    description: >
+      Free-form identifier for this report series within the project, e.g.
+      "backend" or "frontend". Lets one repo track multiple independently
+      trended series in coverage-tracker (e.g. a backend unit-test suite and
+      a frontend suite reported by separate jobs). Optional: when omitted,
+      reports are grouped under "default", matching prior single-series
+      behavior.
+    required: false
+    default: 'default'
+
   # ── Optional complexity / duplication reports ────────────────────────────
   complexity-path:
     description: >

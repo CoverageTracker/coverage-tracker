@@ -114,4 +114,44 @@ describe('GET /api/projects/:owner/:repo/metrics', () => {
     const body = await res.json() as { data: unknown[] };
     expect(body.data).toHaveLength(1);
   });
+
+  it('only returns rows for an explicitly requested category', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await testEnv.DB.prepare(
+      `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage)
+       VALUES (1, 'sha-be', 'main', 'backend', ?1, 90),
+              (1, 'sha-fe', 'main', 'frontend', ?1, 30)`,
+    ).bind(now).run();
+
+    const res = await get('/api/projects/testorg/repo/metrics?category=frontend');
+    const body = await res.json() as { data: Array<{ value: number }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].value).toBe(30);
+  });
+});
+
+describe('GET /api/projects/:owner/:repo/metrics/categories', () => {
+  it('returns 404 for an unregistered project', async () => {
+    const res = await get('/api/projects/nobody/nothing/metrics/categories');
+    expect(res.status).toBe(404);
+  });
+
+  it('groups trend data by category with independent latest values', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await testEnv.DB.prepare(
+      `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage)
+       VALUES (1, 'sha-be', 'main', 'backend', ?1, 92),
+              (1, 'sha-fe', 'main', 'frontend', ?1, 55)`,
+    ).bind(now).run();
+
+    const res = await get('/api/projects/testorg/repo/metrics/categories');
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      categories: Array<{ category: string; data: Array<{ value: number }> }>;
+    };
+
+    expect(body.categories.map((c) => c.category)).toEqual(['backend', 'frontend']);
+    expect(body.categories.find((c) => c.category === 'backend')!.data[0].value).toBe(92);
+    expect(body.categories.find((c) => c.category === 'frontend')!.data[0].value).toBe(55);
+  });
 });

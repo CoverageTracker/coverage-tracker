@@ -136,7 +136,8 @@ export async function main(): Promise<void> {
   }
 
   // ── 4. Threshold checks → Check Run → ingest (shared flow) ────────────────
-  await report(workerUrl, metrics);
+  const category = core.getInput('category') || 'default';
+  await report(workerUrl, metrics, category);
 }
 
 function warnCoberturaTool(): void {
