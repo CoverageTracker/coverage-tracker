@@ -13,12 +13,6 @@ on:
       - 'package-lock.json'
       - '.github/workflows/ci.yml'
   pull_request:
-    # release-prepare.yml bumps this file's report-action pin ahead of the
-    # tag actually existing, so PRs targeting a release/vX.Y.Z branch can't
-    # resolve it. Skip the workflow entirely for those; the tag is live by
-    # the time the release PR (base main) merges.
-    branches-ignore:
-      - 'release/**'
     paths:
       - 'dashboard/**'
       - 'src/**'
