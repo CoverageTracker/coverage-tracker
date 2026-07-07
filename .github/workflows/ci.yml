@@ -79,7 +79,11 @@ jobs:
           retention-days: 30
 
       - name: Report coverage
-        uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.3.0
+        # Local path, not a pinned release tag: this repo dogfoods its own
+        # action, so it should always run the exact code on this branch/ref
+        # rather than a released version that may lag behind (or, during
+        # release prep, not exist yet as a tag at all).
+        uses: ./.github/actions/report
         with:
           worker-url: https://demo.coveragetracker.dev
           coverage-path: dashboard/coverage/lcov.info
@@ -115,7 +119,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Report coverage
-        uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.3.0
+        uses: ./.github/actions/report
         with:
           worker-url: https://demo.coveragetracker.dev
           category: backend
