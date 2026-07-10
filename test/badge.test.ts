@@ -18,23 +18,36 @@ beforeEach(async () => {
   await testEnv.DB.prepare('DELETE FROM coverage_runs').run();
 });
 
-async function getBadge(owner: string, repo: string, metric: string): Promise<Response> {
-  return worker.fetch(
-    new Request(`http://localhost/api/badge/${owner}/${repo}/${metric}.json`),
-    testEnv as never,
-  );
+async function getBadge(
+  owner: string,
+  repo: string,
+  metric: string,
+  category?: string,
+): Promise<Response> {
+  const url = new URL(`http://localhost/api/badge/${owner}/${repo}/${metric}.json`);
+  if (category !== undefined) url.searchParams.set('category', category);
+  return worker.fetch(new Request(url), testEnv as never);
 }
 
 async function seedCoverage(fields: Partial<{
   line_coverage: number;
   duplication_pct: number;
   cyclomatic: number;
+  category: string;
 }>): Promise<void> {
+  const category = fields.category ?? 'default';
   await testEnv.DB.prepare(
-    `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage, duplication_pct, cyclomatic)
-     VALUES (1, 'sha-badge', 'main', ?1, ?2, ?3, ?4)`,
+    `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage, duplication_pct, cyclomatic)
+     VALUES (1, ?5, 'main', ?6, ?1, ?2, ?3, ?4)`,
   )
-    .bind(Math.floor(Date.now() / 1000), fields.line_coverage ?? 50, fields.duplication_pct ?? null, fields.cyclomatic ?? null)
+    .bind(
+      Math.floor(Date.now() / 1000),
+      fields.line_coverage ?? 50,
+      fields.duplication_pct ?? null,
+      fields.cyclomatic ?? null,
+      `sha-badge-${category}`,
+      category,
+    )
     .run();
 }
 
@@ -101,5 +114,50 @@ describe('GET /api/badge/:owner/:repo/:metric.json', () => {
     const body = await res.json() as { color: string; message: string };
     expect(body.color).toBe('blue');
     expect(body.message).toBe('12'); // unitless metric, no % suffix
+  });
+
+  it('returns the non-default category value when default and category rows differ', async () => {
+    await seedCoverage({ line_coverage: 50 });
+    await seedCoverage({ line_coverage: 82.5, category: 'backend' });
+    const res = await getBadge('testorg', 'repo', 'coverage', 'backend');
+    expect(res.status).toBe(200);
+    const body = await res.json() as { message: string };
+    expect(body.message).toBe('82.5%');
+  });
+
+  it('labels the badge with the category name when non-default', async () => {
+    await seedCoverage({ line_coverage: 82.5, category: 'backend' });
+    const res = await getBadge('testorg', 'repo', 'coverage', 'backend');
+    const body = await res.json() as { label: string };
+    expect(body.label).toBe('backend coverage');
+  });
+
+  it('keeps the plain metric name as the label when category is omitted', async () => {
+    await seedCoverage({ line_coverage: 90 });
+    const res = await getBadge('testorg', 'repo', 'coverage');
+    const body = await res.json() as { label: string };
+    expect(body.label).toBe('coverage');
+  });
+
+  it('keeps the plain metric name as the label when category is explicitly default', async () => {
+    await seedCoverage({ line_coverage: 90 });
+    const res = await getBadge('testorg', 'repo', 'coverage', 'default');
+    const body = await res.json() as { label: string };
+    expect(body.label).toBe('coverage');
+  });
+
+  it('404s for a category with no data even when default has data for that metric', async () => {
+    await seedCoverage({ line_coverage: 90 });
+    const res = await getBadge('testorg', 'repo', 'coverage', 'frontend');
+    expect(res.status).toBe(404);
+  });
+
+  it('scopes category filtering to non-coverage metrics too', async () => {
+    await seedCoverage({ line_coverage: 50, cyclomatic: 5 });
+    await seedCoverage({ line_coverage: 50, cyclomatic: 20, category: 'backend' });
+    const defaultRes = await getBadge('testorg', 'repo', 'cyclomatic');
+    const backendRes = await getBadge('testorg', 'repo', 'cyclomatic', 'backend');
+    expect((await defaultRes.json() as { message: string }).message).toBe('5');
+    expect((await backendRes.json() as { message: string }).message).toBe('20');
   });
 });

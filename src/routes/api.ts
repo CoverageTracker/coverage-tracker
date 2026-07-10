@@ -5,9 +5,11 @@ import {
   getProjectBySlug,
   getCoverageTrend,
   getCoverageTrendGrouped,
+  getCoverageTrendGroupedWindowed,
   pickColumnValue,
 } from '../lib/db';
 import { metricToColumn } from '../lib/metrics';
+import { isRangeKey, RANGE_SECONDS } from '../lib/timeRanges';
 import type { Bindings, Variables } from '../types';
 
 const api = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -59,18 +61,38 @@ api.get('/projects/:owner/:repo/metrics/categories', requireAccess(), async (c) 
   const metric = c.req.query('metric') ?? 'coverage';
   const branch = c.req.query('branch') ?? project.default_branch;
   if (branch.length > 255) return c.json({ error: 'Invalid branch' }, 400);
-  const limit = Math.min(Number(c.req.query('limit') ?? '100'), 1000);
 
   const mapping = metricToColumn(metric);
   if (!mapping) return c.json({ error: `Unknown metric: ${metric}` }, 400);
 
-  const points = await getCoverageTrendGrouped(c.env.DB, project.id, branch, limit);
-  const byCategory = new Map<string, Array<{ commit_sha: string; value: number; unit: string; recorded_at: string }>>();
+  const range = c.req.query('range');
+  let points;
+  if (range !== undefined) {
+    if (!isRangeKey(range)) {
+      return c.json({ error: 'Validation failed', issues: [{ message: `Unknown range: ${range}` }] }, 422);
+    }
+    const align = c.req.query('align') === 'true';
+    points = await getCoverageTrendGroupedWindowed(c.env.DB, project.id, branch, RANGE_SECONDS[range], align);
+  } else {
+    const limit = Math.min(Number(c.req.query('limit') ?? '100'), 1000);
+    points = await getCoverageTrendGrouped(c.env.DB, project.id, branch, limit);
+  }
+
+  const byCategory = new Map<
+    string,
+    Array<{ commit_sha: string; value: number; unit: string; recorded_at: string; synthetic?: boolean }>
+  >();
   for (const p of points) {
     const value = pickColumnValue(p, mapping.column);
     if (value === null) continue;
     const arr = byCategory.get(p.category) ?? [];
-    arr.push({ commit_sha: p.commit_sha, value, unit: mapping.unit, recorded_at: p.recorded_at });
+    arr.push({
+      commit_sha: p.commit_sha,
+      value,
+      unit: mapping.unit,
+      recorded_at: p.recorded_at,
+      ...(p.synthetic ? { synthetic: true } : {}),
+    });
     byCategory.set(p.category, arr);
   }
 

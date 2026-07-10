@@ -1,6 +1,7 @@
 <script lang="ts">
   import uPlot from 'uplot';
   import 'uplot/dist/uPlot.min.css';
+  import { gradientFill } from '../chartFill';
 
   let {
     timestamps,
@@ -10,13 +11,6 @@
 
   let container: HTMLDivElement;
   let chart: uPlot | null = null;
-
-  function hexAlpha(hex: string, alpha: number): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
 
   function buildChart(c: string) {
     chart?.destroy();
@@ -36,7 +30,7 @@
           {},
           {
             stroke: c,
-            fill: hexAlpha(c, 0.2),
+            fill: gradientFill(c),
             width: 1.5,
             points: { show: false },
           },
