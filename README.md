@@ -1,6 +1,7 @@
 # coverage-tracker
 
-![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fdemo.coveragetracker.dev%2Fapi%2Fbadge%2FCoverageTracker%2Fcoverage-tracker%2Fcoverage.json)
+![coverage (backend) badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fdemo.coveragetracker.dev%2Fapi%2Fbadge%2FCoverageTracker%2Fcoverage-tracker%2Fcoverage.json%3Fcategory%3Dbackend)
+![coverage (frontend) badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fdemo.coveragetracker.dev%2Fapi%2Fbadge%2FCoverageTracker%2Fcoverage-tracker%2Fcoverage.json%3Fcategory%3Dfrontend)
 [![License Scan](https://github.com/CoverageTracker/coverage-tracker/actions/workflows/scancode.yml/badge.svg)](https://github.com/CoverageTracker/coverage-tracker/actions/workflows/scancode.yml)
 
 A self-hosted dashboard that tracks code coverage, cyclomatic complexity, and code duplication across your GitHub repositories — with trend charts, per-PR diff checks, and README badges.
