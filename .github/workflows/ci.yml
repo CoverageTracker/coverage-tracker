@@ -3,25 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'dashboard/**'
-      - 'src/**'
-      - 'test/**'
-      - 'vitest.config.mts'
-      - 'wrangler.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci.yml'
   pull_request:
-    paths:
-      - 'dashboard/**'
-      - 'src/**'
-      - 'test/**'
-      - 'vitest.config.mts'
-      - 'wrangler.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci.yml'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
