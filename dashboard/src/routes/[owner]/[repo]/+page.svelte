@@ -5,7 +5,7 @@
   import TrendChart from '$lib/components/TrendChart.svelte';
   import BadgeModal from '$lib/components/BadgeModal.svelte';
   import { theme } from '$lib/theme.svelte';
-  import { METRICS } from '$lib/types';
+  import { METRICS, RANGES } from '$lib/types';
 
   let { data } = $props();
 
@@ -64,6 +64,17 @@
       {/each}
     </div>
 
+    <div class="metric-tabs" role="tablist" aria-label="Time range">
+      {#each RANGES as r (r.key)}
+        <button
+          role="tab"
+          aria-selected={data.range === r.key}
+          class:active={data.range === r.key}
+          onclick={() => updateParams({ range: r.key })}
+        >{r.label}</button>
+      {/each}
+    </div>
+
     <div class="controls-right">
       <form class="branch-form" onsubmit={applyBranch}>
         <label for="branch-input">Branch</label>
@@ -104,7 +115,7 @@
               <span class="trend-title"
                 >{cat.category} — {data.metric.charAt(0).toUpperCase() + data.metric.slice(1)} over time</span
               >
-              <span class="trend-desc">Last 30 days · {data.branch}</span>
+              <span class="trend-desc">Last {data.range} · {data.branch}</span>
             </div>
             <div class="trend-card-value">
               {#if latestValue !== null}
@@ -145,6 +156,7 @@
       repo={data.project.repo_name}
       projectId={data.project.id}
       badgeEnabled={data.project.badge_enabled}
+      defaultBranch={data.project.default_branch}
       onclose={() => (badgeModalOpen = false)}
     />
   {/if}

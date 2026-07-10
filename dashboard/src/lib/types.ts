@@ -15,13 +15,8 @@ export interface MetricPoint {
   value: number;
   unit: string;
   recorded_at: string;
-}
-
-export interface TrendResponse {
-  project: string;
-  branch: string;
-  metric: string;
-  data: MetricPoint[];
+  /** True for a point synthesized to anchor/carry a line to a window boundary — not a real run. */
+  synthetic?: boolean;
 }
 
 export interface CategoryTrend {
@@ -39,3 +34,18 @@ export interface GroupedTrendResponse {
 export type MetricName = 'coverage' | 'complexity' | 'duplication';
 
 export const METRICS: MetricName[] = ['coverage', 'complexity', 'duplication'];
+
+export type RangeKey = '15m' | '1h' | '12h' | '1d' | '7d' | '30d';
+
+export const RANGES: { key: RangeKey; label: string }[] = [
+  { key: '15m', label: '15m' },
+  { key: '1h', label: '1h' },
+  { key: '12h', label: '12h' },
+  { key: '1d', label: '1d' },
+  { key: '7d', label: '7d' },
+  { key: '30d', label: '30d' },
+];
+
+export function isRangeKey(value: string): value is RangeKey {
+  return RANGES.some((r) => r.key === value);
+}

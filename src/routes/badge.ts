@@ -21,7 +21,8 @@ badge.get('/:owner/:repo/:metric{.+\\.json}', async (c) => {
   const mapping = metricToColumn(metricName);
   if (!mapping) return c.notFound();
 
-  const run = await getLatestCoverage(c.env.DB, project.id, project.default_branch);
+  const category = c.req.query('category') ?? 'default';
+  const run = await getLatestCoverage(c.env.DB, project.id, project.default_branch, category);
   if (!run) return c.notFound();
 
   const value = pickMetricValue(run, mapping.column);
@@ -32,7 +33,7 @@ badge.get('/:owner/:repo/:metric{.+\\.json}', async (c) => {
 
   return c.json({
     schemaVersion: 1,
-    label: metricName,
+    label: category === 'default' ? metricName : `${category} ${metricName}`,
     message,
     color,
   });

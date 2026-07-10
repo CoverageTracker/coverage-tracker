@@ -1,18 +1,21 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
+  import { fetchTrendByCategory } from '$lib/api';
 
   let {
     owner,
     repo,
     projectId,
     badgeEnabled,
+    defaultBranch,
     onclose,
   }: {
     owner: string;
     repo: string;
     projectId: number;
     badgeEnabled: number;
+    defaultBranch: string;
     onclose: () => void;
   } = $props();
 
@@ -26,16 +29,42 @@
   ];
 
   let selectedMetric = $state('coverage');
+  let categories = $state<string[]>(['default']);
+  let selectedCategory = $state('default');
   let localBadgeEnabled = $state(untrack(() => badgeEnabled));
   let toggling = $state(false);
 
+  $effect(() => {
+    const metric = selectedMetric;
+    (async () => {
+      let next = ['default'];
+      try {
+        const result = await fetchTrendByCategory(owner, repo, metric, defaultBranch, { limit: 1 });
+        if (result.categories.length > 0) {
+          next = result.categories.map((c) => c.category);
+        }
+      } catch {
+        // fall back to ['default']
+      }
+      categories = next;
+      if (!next.includes(selectedCategory)) {
+        selectedCategory = next[0] ?? 'default';
+      }
+    })();
+  });
+
   const badgeEndpointUrl = $derived(
-    `${window.location.origin}/api/badge/${owner}/${repo}/${selectedMetric}.json`,
+    `${window.location.origin}/api/badge/${owner}/${repo}/${selectedMetric}.json${
+      selectedCategory !== 'default' ? `?category=${encodeURIComponent(selectedCategory)}` : ''
+    }`,
   );
   const shieldsUrl = $derived(
     `https://img.shields.io/endpoint?url=${encodeURIComponent(badgeEndpointUrl)}`,
   );
-  const markdownSnippet = $derived(`![${selectedMetric} badge](${shieldsUrl})`);
+  const badgeAltText = $derived(
+    `${selectedMetric}${selectedCategory !== 'default' ? ` (${selectedCategory})` : ''} badge`,
+  );
+  const markdownSnippet = $derived(`![${badgeAltText}](${shieldsUrl})`);
   const rstSnippet = $derived(`.. image:: ${shieldsUrl}`);
 
   let copiedField: string | null = $state(null);
@@ -155,11 +184,18 @@
             <option value={m.value}>{m.label}</option>
           {/each}
         </select>
+
+        <label for="badge-category-select" class="metric-label">Category</label>
+        <select id="badge-category-select" class="metric-select" bind:value={selectedCategory}>
+          {#each categories as cat (cat)}
+            <option value={cat}>{cat}</option>
+          {/each}
+        </select>
       </div>
 
       <div class="badge-preview">
         {#if localBadgeEnabled}
-          <img src={shieldsUrl} alt="{selectedMetric} status badge" />
+          <img src={shieldsUrl} alt="{badgeAltText} status badge" />
         {:else}
           <span class="badge-placeholder">badge preview unavailable</span>
         {/if}
@@ -358,6 +394,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .metric-label {

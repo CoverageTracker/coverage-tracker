@@ -4,11 +4,14 @@ import {
   upsertCoverageRun,
   getCoverageTrend,
   getCoverageTrendGrouped,
+  getCoverageTrendWindowed,
+  getCoverageTrendGroupedWindowed,
   getLatestCoverage,
   insertMetric,
   getMetricsTrend,
   getLatestMetric,
 } from '../src/lib/db';
+import { RANGE_SECONDS } from '../src/lib/timeRanges';
 import type { Bindings } from '../src/types';
 
 // @ts-expect-error cloudflare:test injects env at runtime
@@ -231,5 +234,102 @@ describe('getLatestMetric', () => {
     const result = await getLatestMetric(testEnv.DB, 1, 'main', 'coverage');
     expect(result?.value).toBe(95);
     expect(result?.commit_sha).toBe('sha-new');
+  });
+});
+
+describe('getCoverageTrendWindowed — single point, sub-day window', () => {
+  it('flat-lines a lone point across the whole window, anchor pinned left / latest pinned right', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-only', 'main', NOW, { line_coverage: 88.4 });
+
+    const points = await getCoverageTrendWindowed(testEnv.DB, 1, 'main', 'default', RANGE_SECONDS['15m']);
+
+    expect(points).toHaveLength(2);
+    expect(points[0].synthetic).toBe(true);
+    expect(points[0].line_coverage).toBe(88.4);
+    expect(points[1].synthetic).toBeFalsy();
+    expect(points[1].line_coverage).toBe(88.4);
+    expect(points[1].commit_sha).toBe('sha-only');
+  });
+
+  it('regression guard: anchor and latest timestamps are distinct, not day-collapsed onto one x', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-only', 'main', NOW, { line_coverage: 50 });
+
+    const points = await getCoverageTrendWindowed(testEnv.DB, 1, 'main', 'default', RANGE_SECONDS['15m']);
+
+    expect(points).toHaveLength(2);
+    const t0 = new Date(points[0].recorded_at).getTime();
+    const t1 = new Date(points[1].recorded_at).getTime();
+    expect(Number.isNaN(t0)).toBe(false);
+    expect(Number.isNaN(t1)).toBe(false);
+    expect(t1 - t0).toBe(RANGE_SECONDS['15m'] * 1000);
+  });
+});
+
+describe('getCoverageTrendWindowed — anchor is the closest prior point, not an average', () => {
+  it('uses the nearest row before the window, ignoring older rows further back', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-latest', 'main', NOW, { line_coverage: 90 });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-2d', 'main', NOW - 2 * DAY, { line_coverage: 70 });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-5d', 'main', NOW - 5 * DAY, { line_coverage: 50 });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-10d', 'main', NOW - 10 * DAY, { line_coverage: 30 });
+
+    const points = await getCoverageTrendWindowed(testEnv.DB, 1, 'main', 'default', RANGE_SECONDS['1d']);
+
+    expect(points[0].synthetic).toBe(true);
+    // Closest prior row (2 days back) wins — not the average of 70/50/30.
+    expect(points[0].line_coverage).toBe(70);
+    expect(points.at(-1)!.line_coverage).toBe(90);
+  });
+});
+
+describe('getCoverageTrendWindowed — 30d window crosses the raw retention boundary', () => {
+  it('sources the anchor from coverage_daily once coverage_runs has been pruned', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-latest', 'main', NOW, { line_coverage: 95 });
+    const oldDay = new Date((NOW - 40 * DAY) * 1000).toISOString().slice(0, 10);
+    await testEnv.DB.prepare(
+      `INSERT INTO coverage_daily (project_id, category, day, line_coverage, run_count)
+       VALUES (1, 'default', ?1, 10, 1)`,
+    ).bind(oldDay).run();
+
+    const points = await getCoverageTrendWindowed(testEnv.DB, 1, 'main', 'default', RANGE_SECONDS['30d']);
+
+    expect(points[0].synthetic).toBe(true);
+    expect(points[0].line_coverage).toBe(10);
+    expect(points.at(-1)!.line_coverage).toBe(95);
+  });
+});
+
+describe('getCoverageTrendGroupedWindowed — align forward-carries stale categories', () => {
+  it('shares one right edge across categories and carries a stale series forward to it', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-be', 'main', NOW, { category: 'backend', line_coverage: 90 });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-fe', 'main', NOW - 10 * DAY, {
+      category: 'frontend',
+      line_coverage: 60,
+    });
+
+    const grouped = await getCoverageTrendGroupedWindowed(testEnv.DB, 1, 'main', RANGE_SECONDS['30d'], true);
+
+    const backend = grouped.filter((p) => p.category === 'backend');
+    const frontend = grouped.filter((p) => p.category === 'frontend');
+
+    // Both series must reach the same shared right edge (backend's own latest, since it's more recent).
+    expect(frontend.at(-1)!.recorded_at).toBe(backend.at(-1)!.recorded_at);
+    expect(frontend.at(-1)!.synthetic).toBe(true);
+    expect(frontend.at(-1)!.line_coverage).toBe(60);
+  });
+
+  it('without align, categories keep their own independent right edges', async () => {
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-be', 'main', NOW, { category: 'backend', line_coverage: 90 });
+    await upsertCoverageRun(testEnv.DB, 1, 'sha-fe', 'main', NOW - 10 * DAY, {
+      category: 'frontend',
+      line_coverage: 60,
+    });
+
+    const grouped = await getCoverageTrendGroupedWindowed(testEnv.DB, 1, 'main', RANGE_SECONDS['30d'], false);
+
+    const backend = grouped.filter((p) => p.category === 'backend');
+    const frontend = grouped.filter((p) => p.category === 'frontend');
+
+    expect(frontend.at(-1)!.recorded_at).not.toBe(backend.at(-1)!.recorded_at);
+    expect(frontend.at(-1)!.synthetic).toBeFalsy();
   });
 });

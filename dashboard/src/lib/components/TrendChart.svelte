@@ -2,6 +2,7 @@
   import uPlot from 'uplot';
   import 'uplot/dist/uPlot.min.css';
   import type { MetricPoint } from '../types';
+  import { hexAlpha, gradientFill } from '../chartFill';
 
   let {
     data,
@@ -23,22 +24,6 @@
 
   let container: HTMLDivElement;
   let chart: uPlot | null = null;
-
-  function hexAlpha(hex: string, alpha: number): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-
-  function gradientFill(c: string) {
-    return (u: uPlot) => {
-      const grad = u.ctx.createLinearGradient(0, u.bbox.top, 0, u.bbox.top + u.bbox.height);
-      grad.addColorStop(0, hexAlpha(c, 0.28));
-      grad.addColorStop(1, hexAlpha(c, 0.02));
-      return grad;
-    };
-  }
 
   // Draw a dot + vertical dashed guide at the last data point
   function lastPointPlugin(c: string, bc: string) {

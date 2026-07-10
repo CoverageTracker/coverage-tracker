@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import SparkLine from '$lib/components/SparkLine.svelte';
+  import MultiSparkLine from '$lib/components/MultiSparkLine.svelte';
   import { theme } from '$lib/theme.svelte';
   import type { MetricPoint } from '$lib/types';
 
@@ -11,6 +12,11 @@
       timestamps: trend.map((p) => new Date(p.recorded_at).getTime() / 1000),
       values: trend.map((p) => p.value),
     };
+  }
+
+  function categoryColor(index: number): string {
+    const chart = theme.tokens.chart;
+    return chart[index % chart.length];
   }
 
   function avatarLetter(slug: string): string {
@@ -60,17 +66,42 @@
             </div>
           </div>
           <div class="card-body">
-            {#if project.latestCoverage}
+            {#if project.categories.length === 0}
+              <span class="no-data">no data yet</span>
+            {:else if project.categories.length === 1}
+              {@const [cat] = project.categories}
+              {@const latest = cat.data.at(-1) ?? null}
               <div class="metric">
-                <span class="metric-value">{project.latestCoverage.value.toFixed(1)}%</span>
+                {#if latest}
+                  <span class="metric-value">{latest.value.toFixed(1)}%</span>
+                {/if}
                 <span class="metric-label">Coverage</span>
               </div>
+              {#if browser && cat.data.length > 1}
+                {@const sd = sparklineData(cat.data)}
+                <SparkLine timestamps={sd.timestamps} values={sd.values} color={theme.tokens.chart[0]} />
+              {/if}
             {:else}
-              <span class="no-data">no data yet</span>
-            {/if}
-            {#if browser && project.coverageTrend.length > 1}
-              {@const sd = sparklineData(project.coverageTrend)}
-              <SparkLine timestamps={sd.timestamps} values={sd.values} color={theme.tokens.chart[0]} />
+              <div class="multi-metric">
+                <div class="legend">
+                  {#each project.categories as cat, i (cat.category)}
+                    <span class="legend-item">
+                      <span class="legend-dot" style="background:{categoryColor(i)}"></span>
+                      {cat.category}
+                    </span>
+                  {/each}
+                </div>
+                {#if browser}
+                  <MultiSparkLine
+                    series={project.categories.map((cat, i) => ({
+                      category: cat.category,
+                      timestamps: cat.data.map((p) => new Date(p.recorded_at).getTime() / 1000),
+                      values: cat.data.map((p) => p.value),
+                      color: categoryColor(i),
+                    }))}
+                  />
+                {/if}
+              </div>
             {/if}
           </div>
         </a>
@@ -216,5 +247,34 @@
     font-size: 13px;
     color: var(--muted);
     font-style: italic;
+  }
+
+  .multi-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
 </style>

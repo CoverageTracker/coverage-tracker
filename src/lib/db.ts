@@ -1,5 +1,6 @@
 import type { Project, Owner, CoverageRun } from '../types';
 import type { CoverageColumn } from './metrics';
+import { SUB_DAY_THRESHOLD_SECONDS } from './timeRanges';
 
 /**
  * Look up a project by its full_slug (e.g. "owner/repo").
@@ -303,6 +304,8 @@ export interface CoverageTrendPoint {
   cognitive: number | null;
   duplication_pct: number | null;
   maintainability: number | null;
+  /** True for a point synthesized to anchor/carry a line to a window boundary — not a real run. */
+  synthetic?: boolean;
 }
 
 export async function getCoverageTrend(
@@ -420,4 +423,317 @@ export async function getCoverageTrendGrouped(
 export function pickColumnValue(point: CoverageTrendPoint, column: CoverageColumn): number | null {
   const v = point[column];
   return v != null ? v : null;
+}
+
+// ── Windowed + anchored trend queries (relative time-range charts) ────────
+//
+// Right edge = the latest known point (own latest, or a shared max across
+// categories when aligning). Window start = right edge − rangeSeconds. A
+// synthetic "anchor" point is emitted at the window start using the closest
+// real row at-or-before it (or the earliest available row as a fallback), so
+// the chart always draws full-width instead of leaving empty space or a lone
+// dot. Windows < 1 day use raw coverage_runs at full timestamp precision
+// (coverage_daily's `recorded_at` is a YYYY-MM-DD day string — reusing it for
+// sub-day windows would collapse the anchor and latest points onto the same
+// x position). Windows >= 1 day keep the existing day-collapsed semantics.
+
+interface WindowRow {
+  commit_sha: string;
+  recorded_at: string;
+  line_coverage: number;
+  branch_coverage: number | null;
+  cyclomatic: number | null;
+  cognitive: number | null;
+  duplication_pct: number | null;
+  maintainability: number | null;
+}
+
+const WINDOW_SELECT_COLUMNS =
+  'commit_sha, line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability';
+
+function dayString(epochSeconds: number): string {
+  return new Date(epochSeconds * 1000).toISOString().slice(0, 10);
+}
+
+function epochToIso(epochSeconds: number): string {
+  return new Date(epochSeconds * 1000).toISOString();
+}
+
+async function getOwnLatestTimestamp(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+): Promise<number | null> {
+  const run = await getLatestCoverageRun(db, projectId, branch, category);
+  if (run) return run.ran_at;
+
+  const daily = await db
+    .prepare(`SELECT day FROM coverage_daily WHERE project_id = ?1 AND category = ?2 ORDER BY day DESC LIMIT 1`)
+    .bind(projectId, category)
+    .first<{ day: string }>();
+  if (!daily) return null;
+  return Math.floor(Date.parse(`${daily.day}T00:00:00Z`) / 1000);
+}
+
+async function subDayInWindowRows(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+  windowStart: number,
+  rightEdge: number,
+): Promise<WindowRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${WINDOW_SELECT_COLUMNS}, strftime('%Y-%m-%dT%H:%M:%SZ', ran_at, 'unixepoch') AS recorded_at
+       FROM coverage_runs
+       WHERE project_id = ?1 AND branch = ?2 AND category = ?3 AND ran_at BETWEEN ?4 AND ?5
+       ORDER BY ran_at ASC`,
+    )
+    .bind(projectId, branch, category, windowStart, rightEdge)
+    .all<WindowRow>();
+  return results;
+}
+
+async function subDayAnchorRow(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+  windowStart: number,
+): Promise<WindowRow | null> {
+  const row = await db
+    .prepare(
+      `SELECT ${WINDOW_SELECT_COLUMNS}, strftime('%Y-%m-%dT%H:%M:%SZ', ran_at, 'unixepoch') AS recorded_at
+       FROM coverage_runs
+       WHERE project_id = ?1 AND branch = ?2 AND category = ?3 AND ran_at <= ?4
+       ORDER BY ran_at DESC LIMIT 1`,
+    )
+    .bind(projectId, branch, category, windowStart)
+    .first<WindowRow>();
+  return row ?? null;
+}
+
+async function subDayEarliestRow(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+): Promise<WindowRow | null> {
+  const row = await db
+    .prepare(
+      `SELECT ${WINDOW_SELECT_COLUMNS}, strftime('%Y-%m-%dT%H:%M:%SZ', ran_at, 'unixepoch') AS recorded_at
+       FROM coverage_runs
+       WHERE project_id = ?1 AND branch = ?2 AND category = ?3
+       ORDER BY ran_at ASC LIMIT 1`,
+    )
+    .bind(projectId, branch, category)
+    .first<WindowRow>();
+  return row ?? null;
+}
+
+/** Shared day-collapsed union of coverage_daily + last-of-day coverage_runs, as a subquery. */
+function dayUnionSql(): string {
+  return `
+    SELECT 'aggregated' AS commit_sha, day AS recorded_at,
+           line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+    FROM coverage_daily
+    WHERE project_id = ?1 AND category = ?3
+      AND day NOT IN (
+        SELECT DISTINCT strftime('%Y-%m-%d', ran_at, 'unixepoch')
+        FROM coverage_runs
+        WHERE project_id = ?1 AND branch = ?2 AND category = ?3
+      )
+
+    UNION ALL
+
+    SELECT commit_sha, strftime('%Y-%m-%d', ran_at, 'unixepoch') AS recorded_at,
+           line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+    FROM (
+      SELECT *,
+             ROW_NUMBER() OVER (
+               PARTITION BY strftime('%Y-%m-%d', ran_at, 'unixepoch')
+               ORDER BY ran_at DESC
+             ) AS rn
+      FROM coverage_runs
+      WHERE project_id = ?1 AND branch = ?2 AND category = ?3
+    )
+    WHERE rn = 1
+  `;
+}
+
+async function dayInWindowRows(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+  windowStartDay: string,
+  rightEdgeDay: string,
+): Promise<WindowRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT commit_sha, recorded_at, line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+       FROM (${dayUnionSql()})
+       WHERE recorded_at BETWEEN ?4 AND ?5
+       ORDER BY recorded_at ASC`,
+    )
+    .bind(projectId, branch, category, windowStartDay, rightEdgeDay)
+    .all<WindowRow>();
+  return results;
+}
+
+async function dayAnchorRow(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+  windowStartDay: string,
+): Promise<WindowRow | null> {
+  const row = await db
+    .prepare(
+      `SELECT commit_sha, recorded_at, line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+       FROM (${dayUnionSql()})
+       WHERE recorded_at < ?4
+       ORDER BY recorded_at DESC LIMIT 1`,
+    )
+    .bind(projectId, branch, category, windowStartDay)
+    .first<WindowRow>();
+  return row ?? null;
+}
+
+async function dayEarliestRow(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+): Promise<WindowRow | null> {
+  const row = await db
+    .prepare(
+      `SELECT commit_sha, recorded_at, line_coverage, branch_coverage, cyclomatic, cognitive, duplication_pct, maintainability
+       FROM (${dayUnionSql()})
+       ORDER BY recorded_at ASC LIMIT 1`,
+    )
+    .bind(projectId, branch, category)
+    .first<WindowRow>();
+  return row ?? null;
+}
+
+export interface WindowedTrendOptions {
+  /** Use this instead of the category's own latest point as the right edge — for cross-category alignment. */
+  rightEdge?: number;
+  /** If the series' last point sits before the right edge, append a synthetic point carrying its value forward. */
+  forwardCarry?: boolean;
+}
+
+/**
+ * Windowed + edge-anchored trend for one category. See the block comment above
+ * this section for the overall strategy.
+ */
+export async function getCoverageTrendWindowed(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  category: string,
+  rangeSeconds: number,
+  options: WindowedTrendOptions = {},
+): Promise<CoverageTrendPoint[]> {
+  let rightEdge = options.rightEdge;
+  if (rightEdge === undefined) {
+    const own = await getOwnLatestTimestamp(db, projectId, branch, category);
+    if (own === null) return [];
+    rightEdge = own;
+  }
+
+  const windowStart = rightEdge - rangeSeconds;
+  const subDay = rangeSeconds < SUB_DAY_THRESHOLD_SECONDS;
+
+  let rows: WindowRow[];
+  let anchor: WindowRow | null;
+  let earliest: WindowRow | null = null;
+
+  if (subDay) {
+    rows = await subDayInWindowRows(db, projectId, branch, category, windowStart, rightEdge);
+    anchor = await subDayAnchorRow(db, projectId, branch, category, windowStart);
+    if (!anchor) earliest = rows[0] ?? (await subDayEarliestRow(db, projectId, branch, category));
+  } else {
+    const windowStartDay = dayString(windowStart);
+    const rightEdgeDay = dayString(rightEdge);
+    rows = await dayInWindowRows(db, projectId, branch, category, windowStartDay, rightEdgeDay);
+    anchor = await dayAnchorRow(db, projectId, branch, category, windowStartDay);
+    if (!anchor) earliest = rows[0] ?? (await dayEarliestRow(db, projectId, branch, category));
+  }
+
+  if (!anchor && !earliest) return [];
+
+  const anchorValue = (anchor ?? earliest)!;
+  const anchorRecordedAt = subDay ? epochToIso(windowStart) : dayString(windowStart);
+
+  const points: CoverageTrendPoint[] = [];
+  if (rows.length === 0 || rows[0].recorded_at !== anchorRecordedAt) {
+    points.push({ ...anchorValue, recorded_at: anchorRecordedAt, synthetic: true });
+  }
+  points.push(...rows);
+
+  if (options.forwardCarry && points.length > 0) {
+    const rightEdgeRecordedAt = subDay ? epochToIso(rightEdge) : dayString(rightEdge);
+    const last = points[points.length - 1];
+    if (last.recorded_at !== rightEdgeRecordedAt) {
+      points.push({ ...last, recorded_at: rightEdgeRecordedAt, synthetic: true });
+    }
+  }
+
+  return points;
+}
+
+async function getProjectCategories(db: D1Database, projectId: number, branch: string): Promise<string[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT DISTINCT category FROM (
+         SELECT category FROM coverage_runs WHERE project_id = ?1 AND branch = ?2
+         UNION
+         SELECT category FROM coverage_daily WHERE project_id = ?1
+       )
+       ORDER BY category ASC`,
+    )
+    .bind(projectId, branch)
+    .all<{ category: string }>();
+  return results.map((r) => r.category);
+}
+
+/**
+ * Windowed + edge-anchored trend for every category with data on this project/branch.
+ * When `align` is true (list-page overlay), all categories share one right edge — the
+ * max of each category's own latest point — and a stale category's line is forward-carried
+ * to that shared edge so every series spans the identical domain.
+ */
+export async function getCoverageTrendGroupedWindowed(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+  rangeSeconds: number,
+  align: boolean = false,
+): Promise<CoverageTrendPointWithCategory[]> {
+  const categories = await getProjectCategories(db, projectId, branch);
+  if (categories.length === 0) return [];
+
+  let sharedRightEdge: number | undefined;
+  if (align) {
+    const edges = await Promise.all(categories.map((c) => getOwnLatestTimestamp(db, projectId, branch, c)));
+    const known = edges.filter((e): e is number => e !== null);
+    if (known.length === 0) return [];
+    sharedRightEdge = Math.max(...known);
+  }
+
+  const perCategory = await Promise.all(
+    categories.map(async (category) => {
+      const points = await getCoverageTrendWindowed(db, projectId, branch, category, rangeSeconds, {
+        rightEdge: sharedRightEdge,
+        forwardCarry: align,
+      });
+      return points.map((p) => ({ ...p, category }));
+    }),
+  );
+
+  return perCategory.flat();
 }

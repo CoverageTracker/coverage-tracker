@@ -154,4 +154,30 @@ describe('GET /api/projects/:owner/:repo/metrics/categories', () => {
     expect(body.categories.find((c) => c.category === 'backend')!.data[0].value).toBe(92);
     expect(body.categories.find((c) => c.category === 'frontend')!.data[0].value).toBe(55);
   });
+
+  it('returns 422 for an unknown range value', async () => {
+    const res = await get('/api/projects/testorg/repo/metrics/categories?range=3weeks');
+    expect(res.status).toBe(422);
+  });
+
+  it('returns an edge-anchored, full-width series when range is given', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await testEnv.DB.prepare(
+      `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
+       VALUES (1, 'sha-only', 'main', ?1, 77)`,
+    ).bind(now).run();
+
+    const res = await get('/api/projects/testorg/repo/metrics/categories?range=15m');
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      categories: Array<{ category: string; data: Array<{ value: number; recorded_at: string; synthetic?: boolean }> }>;
+    };
+
+    const defaultCat = body.categories.find((c) => c.category === 'default')!;
+    expect(defaultCat.data).toHaveLength(2);
+    expect(defaultCat.data[0].synthetic).toBe(true);
+    expect(defaultCat.data[0].value).toBe(77);
+    expect(defaultCat.data[1].value).toBe(77);
+    expect(defaultCat.data[0].recorded_at).not.toBe(defaultCat.data[1].recorded_at);
+  });
 });
