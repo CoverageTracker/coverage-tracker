@@ -40,3 +40,6 @@ license_policies:
   - license_key: lgpl-3.0
     label: Prohibited License
     compliance_alert: error
+  - license_key: agpl-3.0-or-later
+    label: Prohibited License
+    compliance_alert: error
