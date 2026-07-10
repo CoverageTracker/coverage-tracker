@@ -1,0 +1,7 @@
+/docs/                      @CoverageTracker/owners
+/README.md                  @CoverageTracker/owners
+/CLAUDE.md                  @CoverageTracker/owners
+/.github/FUNDING.yml        @CoverageTracker/owners
+/.github/actions/report     @CoverageTracker/owners
+/LICENSE                    @CoverageTracker/owners
+/wrangler.json*             @CoverageTracker/owners
