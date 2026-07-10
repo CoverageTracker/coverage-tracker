@@ -32,7 +32,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-scancode-
 
-      - uses: aboutcode-org/scancode-action@e46d127dfbe502ad2699fbbba8efedad1b2adbd1 # beta
+      - uses: aboutcode-org/scancode-action@76777db8400d719de67ba3e465c5881037b45cb9 # main, 2026-07-10
         with:
           pipelines: "scan_codebase"
           output-formats: "json spdx cyclonedx"
