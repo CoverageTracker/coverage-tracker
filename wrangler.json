@@ -1,53 +1,53 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "demo-coveragetracker-dev",
-	"main": "src/index.ts",
-	"send_metrics": false,
-	"compatibility_date": "2026-06-25",
-	"compatibility_flags": ["nodejs_compat"],
-	"assets": {
-		"directory": "./dashboard/build",
-		"binding": "ASSETS",
-		"not_found_handling": "single-page-application",
-		"run_worker_first": ["/api/*"]
-	},
-	"observability": { "enabled": true },
-	"triggers": { "crons": ["30 6 * * *"] },
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "coverage-demo",
-			"migrations_dir": "migrations"
-		}
-	],
-	"secrets": {
-		"required": [
-			"GITHUB_APP_ID",
-			"GITHUB_APP_CLIENT_ID",
-			"GITHUB_APP_PRIVATE_KEY",
-			"GITHUB_WEBHOOK_SECRET",
-			"CF_ACCESS_AUD",
-			"CF_ACCESS_TEAM_DOMAIN"
-		]
-	},
-	"build": {
-		"command": "npm --prefix dashboard clean-install && npm --prefix dashboard run build"
-	},
-	"env": {
-		"dev": {
-			"d1_databases": [
-				{
-					"binding": "DB",
-					"database_name": "coverage",
-					"migrations_dir": "migrations"
-				}
-			],
-			"secrets": {
-				"required": []
-			},
-			"vars": {
-				"ENVIRONMENT": "development"
-			}
-		}
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "demo-coveragetracker-dev",
+  "main": "src/index.ts",
+  "send_metrics": false,
+  "compatibility_date": "2026-06-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dashboard/build",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["30 6 * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "coverage-demo",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "secrets": {
+    "required": [
+      "GITHUB_APP_ID",
+      "GITHUB_APP_CLIENT_ID",
+      "GITHUB_APP_PRIVATE_KEY",
+      "GITHUB_WEBHOOK_SECRET",
+      "CF_ACCESS_AUD",
+      "CF_ACCESS_TEAM_DOMAIN"
+    ]
+  },
+  "build": {
+    "command": "npm --prefix dashboard clean-install && npm --prefix dashboard run build"
+  },
+  "env": {
+    "dev": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "coverage",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "secrets": {
+        "required": []
+      },
+      "vars": {
+        "ENVIRONMENT": "development"
+      }
+    }
+  }
 }

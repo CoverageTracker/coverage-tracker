@@ -24779,7 +24779,9 @@ async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo, category =
         const data = await res.json();
         baselines[m.name] = data.value;
       } catch {
-        warning(`Baseline fetch for "${m.name}" returned non-JSON body (HTTP ${res.status}) \u2014 skipping baseline.`);
+        warning(
+          `Baseline fetch for "${m.name}" returned non-JSON body (HTTP ${res.status}) \u2014 skipping baseline.`
+        );
       }
     } else if (res.status !== 404) {
       warning(`Baseline fetch for "${m.name}" returned HTTP ${res.status}.`);
@@ -24811,7 +24813,13 @@ async function runPRCheck(workerUrl, oidcToken, metrics, owner, repo, category =
     }
     const failed = reasons.length > 0;
     if (failed) anyFailed = true;
-    const hasThreshold = thresholdConfigured(m.name, minCoverage, maxCoverageDrop, maxComplexity, maxDuplication);
+    const hasThreshold = thresholdConfigured(
+      m.name,
+      minCoverage,
+      maxCoverageDrop,
+      maxComplexity,
+      maxDuplication
+    );
     results.push({
       metric: m.name,
       current: m.value,
@@ -30200,7 +30208,7 @@ function parseLizard(content) {
 
 // src/complexity/detect.ts
 function detectComplexityShape(content) {
-  const trimmed = content.replace(/^﻿/, "").trimStart();
+  const trimmed = content.replace(/^\uFEFF/, "").trimStart();
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "radon";
   if (trimmed.startsWith("<")) return "lizard";
   return "gocyclo";

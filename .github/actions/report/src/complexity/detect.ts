@@ -10,7 +10,7 @@ import { parseLizard } from './lizard';
 export type ComplexityShape = 'radon' | 'lizard' | 'gocyclo';
 
 export function detectComplexityShape(content: string): ComplexityShape {
-  const trimmed = content.replace(/^﻿/, '').trimStart();
+  const trimmed = content.replace(/^\uFEFF/, '').trimStart();
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) return 'radon'; // JSON
   if (trimmed.startsWith('<')) return 'lizard'; // XML
   return 'gocyclo'; // plain text

@@ -27,7 +27,9 @@ describe('performResync', () => {
 
     await performResync(100, testEnv);
 
-    const repoA = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 1001').first<{
+    const repoA = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 1001',
+    ).first<{
       full_slug: string;
       default_branch: string;
       installation_id: number;
@@ -36,7 +38,9 @@ describe('performResync', () => {
     expect(repoA?.default_branch).toBe('main');
     expect(repoA?.installation_id).toBe(100);
 
-    const repoB = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 1002').first<{
+    const repoB = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 1002',
+    ).first<{
       default_branch: string;
     }>();
     expect(repoB?.default_branch).toBe('develop');
@@ -53,7 +57,9 @@ describe('performResync', () => {
 
     await performResync(100, testEnv);
 
-    const repoA = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 1001').first<{
+    const repoA = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 1001',
+    ).first<{
       full_slug: string;
       default_branch: string;
     }>();
@@ -77,7 +83,9 @@ describe('performResync', () => {
 
     await performResync(102, testEnv);
 
-    const orphan = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 88888').first();
+    const orphan = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 88888',
+    ).first();
     expect(orphan).toBeNull();
   });
 

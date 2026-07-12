@@ -16,16 +16,15 @@ export async function getProjectBySlug(db: D1Database, fullSlug: string): Promis
 }
 
 export async function getProjectById(db: D1Database, id: number): Promise<Project | null> {
-  const row = await db
-    .prepare('SELECT * FROM projects WHERE id = ?')
-    .bind(id)
-    .first<Project>();
+  const row = await db.prepare('SELECT * FROM projects WHERE id = ?').bind(id).first<Project>();
   return row ?? null;
 }
 
 export async function listProjectsWithOwners(
   db: D1Database,
-): Promise<Array<Project & { owner_login: string; owner_type: string; owner_avatar_url: string | null }>> {
+): Promise<
+  Array<Project & { owner_login: string; owner_type: string; owner_avatar_url: string | null }>
+> {
   const { results } = await db
     .prepare(
       `SELECT p.*, o.login AS owner_login, o.type AS owner_type, o.avatar_url AS owner_avatar_url
@@ -34,7 +33,9 @@ export async function listProjectsWithOwners(
        ORDER BY o.login, p.repo_name`,
     )
     .all();
-  return results as unknown as Array<Project & { owner_login: string; owner_type: string; owner_avatar_url: string | null }>;
+  return results as unknown as Array<
+    Project & { owner_login: string; owner_type: string; owner_avatar_url: string | null }
+  >;
 }
 
 export async function getMetricsTrend(
@@ -150,17 +151,11 @@ export async function deleteProjectsByInstallation(
   db: D1Database,
   installationId: number,
 ): Promise<void> {
-  await db
-    .prepare('DELETE FROM projects WHERE installation_id = ?')
-    .bind(installationId)
-    .run();
+  await db.prepare('DELETE FROM projects WHERE installation_id = ?').bind(installationId).run();
 }
 
 export async function deleteProjectByRepoId(db: D1Database, githubRepoId: number): Promise<void> {
-  await db
-    .prepare('DELETE FROM projects WHERE github_repo_id = ?')
-    .bind(githubRepoId)
-    .run();
+  await db.prepare('DELETE FROM projects WHERE github_repo_id = ?').bind(githubRepoId).run();
 }
 
 export async function getOwnerByGithubId(db: D1Database, githubId: number): Promise<Owner | null> {
@@ -264,7 +259,13 @@ export async function getLatestCoverageRun(
 
 type LatestCoverage = Pick<
   CoverageRun,
-  'commit_sha' | 'line_coverage' | 'branch_coverage' | 'cyclomatic' | 'cognitive' | 'duplication_pct' | 'maintainability'
+  | 'commit_sha'
+  | 'line_coverage'
+  | 'branch_coverage'
+  | 'cyclomatic'
+  | 'cognitive'
+  | 'duplication_pct'
+  | 'maintainability'
 >;
 
 /**
@@ -469,7 +470,9 @@ async function getOwnLatestTimestamp(
   if (run) return run.ran_at;
 
   const daily = await db
-    .prepare(`SELECT day FROM coverage_daily WHERE project_id = ?1 AND category = ?2 ORDER BY day DESC LIMIT 1`)
+    .prepare(
+      `SELECT day FROM coverage_daily WHERE project_id = ?1 AND category = ?2 ORDER BY day DESC LIMIT 1`,
+    )
     .bind(projectId, category)
     .first<{ day: string }>();
   if (!daily) return null;
@@ -686,7 +689,11 @@ export async function getCoverageTrendWindowed(
   return points;
 }
 
-async function getProjectCategories(db: D1Database, projectId: number, branch: string): Promise<string[]> {
+async function getProjectCategories(
+  db: D1Database,
+  projectId: number,
+  branch: string,
+): Promise<string[]> {
   const { results } = await db
     .prepare(
       `SELECT DISTINCT category FROM (
@@ -719,7 +726,9 @@ export async function getCoverageTrendGroupedWindowed(
 
   let sharedRightEdge: number | undefined;
   if (align) {
-    const edges = await Promise.all(categories.map((c) => getOwnLatestTimestamp(db, projectId, branch, c)));
+    const edges = await Promise.all(
+      categories.map((c) => getOwnLatestTimestamp(db, projectId, branch, c)),
+    );
     const known = edges.filter((e): e is number => e !== null);
     if (known.length === 0) return [];
     sharedRightEdge = Math.max(...known);

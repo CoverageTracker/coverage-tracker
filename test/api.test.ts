@@ -42,7 +42,11 @@ describe('GET /api/projects', () => {
 
     const res = await get('/api/projects');
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<{ full_slug: string; owner_login: string; owner_type: string }>;
+    const body = (await res.json()) as Array<{
+      full_slug: string;
+      owner_login: string;
+      owner_type: string;
+    }>;
 
     const slugs = body.map((p) => p.full_slug);
     expect(slugs).toContain('testorg/repo');
@@ -71,11 +75,13 @@ describe('GET /api/projects/:owner/:repo/metrics', () => {
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
        VALUES (1, 'sha-1', 'main', ?1, 80),
               (1, 'sha-2', 'main', ?2, 90)`,
-    ).bind(now - 86400, now).run();
+    )
+      .bind(now - 86400, now)
+      .run();
 
     const res = await get('/api/projects/testorg/repo/metrics');
     expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = (await res.json()) as {
       project: string;
       branch: string;
       metric: string;
@@ -93,13 +99,15 @@ describe('GET /api/projects/:owner/:repo/metrics', () => {
     await testEnv.DB.prepare(
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
        VALUES (1, 'sha-a', 'main', ?1, 10), (1, 'sha-b', 'main', ?2, 20)`,
-    ).bind(now - 86400, now).run();
+    )
+      .bind(now - 86400, now)
+      .run();
 
     // Math.min(Number(limit), 1000) — a limit far past the cap must not error or
     // attempt to over-fetch; it just can't return more rows than exist.
     const res = await get('/api/projects/testorg/repo/metrics?limit=999999');
     expect(res.status).toBe(200);
-    const body = await res.json() as { data: unknown[] };
+    const body = (await res.json()) as { data: unknown[] };
     expect(body.data).toHaveLength(2);
   });
 
@@ -108,10 +116,12 @@ describe('GET /api/projects/:owner/:repo/metrics', () => {
     await testEnv.DB.prepare(
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
        VALUES (1, 'sha-a', 'main', ?1, 10), (1, 'sha-b', 'main', ?2, 20)`,
-    ).bind(now - 86400, now).run();
+    )
+      .bind(now - 86400, now)
+      .run();
 
     const res = await get('/api/projects/testorg/repo/metrics?limit=1');
-    const body = await res.json() as { data: unknown[] };
+    const body = (await res.json()) as { data: unknown[] };
     expect(body.data).toHaveLength(1);
   });
 
@@ -121,10 +131,12 @@ describe('GET /api/projects/:owner/:repo/metrics', () => {
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage)
        VALUES (1, 'sha-be', 'main', 'backend', ?1, 90),
               (1, 'sha-fe', 'main', 'frontend', ?1, 30)`,
-    ).bind(now).run();
+    )
+      .bind(now)
+      .run();
 
     const res = await get('/api/projects/testorg/repo/metrics?category=frontend');
-    const body = await res.json() as { data: Array<{ value: number }> };
+    const body = (await res.json()) as { data: Array<{ value: number }> };
     expect(body.data).toHaveLength(1);
     expect(body.data[0].value).toBe(30);
   });
@@ -142,11 +154,13 @@ describe('GET /api/projects/:owner/:repo/metrics/categories', () => {
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage)
        VALUES (1, 'sha-be', 'main', 'backend', ?1, 92),
               (1, 'sha-fe', 'main', 'frontend', ?1, 55)`,
-    ).bind(now).run();
+    )
+      .bind(now)
+      .run();
 
     const res = await get('/api/projects/testorg/repo/metrics/categories');
     expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = (await res.json()) as {
       categories: Array<{ category: string; data: Array<{ value: number }> }>;
     };
 
@@ -165,12 +179,17 @@ describe('GET /api/projects/:owner/:repo/metrics/categories', () => {
     await testEnv.DB.prepare(
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
        VALUES (1, 'sha-only', 'main', ?1, 77)`,
-    ).bind(now).run();
+    )
+      .bind(now)
+      .run();
 
     const res = await get('/api/projects/testorg/repo/metrics/categories?range=15m');
     expect(res.status).toBe(200);
-    const body = await res.json() as {
-      categories: Array<{ category: string; data: Array<{ value: number; recorded_at: string; synthetic?: boolean }> }>;
+    const body = (await res.json()) as {
+      categories: Array<{
+        category: string;
+        data: Array<{ value: number; recorded_at: string; synthetic?: boolean }>;
+      }>;
     };
 
     const defaultCat = body.categories.find((c) => c.category === 'default')!;

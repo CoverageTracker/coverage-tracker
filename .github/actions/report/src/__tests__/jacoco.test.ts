@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseJacoco } from '../jacoco';
 
-const report = (counters: string) =>
-  `<?xml version="1.0"?>\n<report name="x">${counters}</report>`;
+const report = (counters: string) => `<?xml version="1.0"?>\n<report name="x">${counters}</report>`;
 
 describe('parseJacoco', () => {
   it('computes line and branch coverage from report-level counters', () => {

@@ -26,7 +26,8 @@ async function postWebhook(opts: {
   if (opts.event !== undefined) headers['X-GitHub-Event'] = opts.event;
   if (opts.deliveryId !== null) headers['X-GitHub-Delivery'] = opts.deliveryId ?? 'delivery-1';
   if (opts.signature !== null) {
-    headers['X-Hub-Signature-256'] = opts.signature ?? (await signWebhookBody(testEnv.GITHUB_WEBHOOK_SECRET, body));
+    headers['X-Hub-Signature-256'] =
+      opts.signature ?? (await signWebhookBody(testEnv.GITHUB_WEBHOOK_SECRET, body));
   }
   return worker.fetch(
     new Request('http://localhost/api/webhooks/github', { method: 'POST', headers, body }),
@@ -62,7 +63,9 @@ describe('requireWebhookHmac', () => {
     const res = await postWebhook({ deliveryId: 'd-valid-1' });
     expect(res.status).toBe(200);
 
-    const row = await testEnv.DB.prepare('SELECT delivery_id FROM webhook_deliveries WHERE delivery_id = ?')
+    const row = await testEnv.DB.prepare(
+      'SELECT delivery_id FROM webhook_deliveries WHERE delivery_id = ?',
+    )
       .bind('d-valid-1')
       .first();
     expect(row).not.toBeNull();

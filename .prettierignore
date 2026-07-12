@@ -1,0 +1,11 @@
+node_modules/
+.claude/
+coverage/
+.wrangler/
+dist/
+worker-configuration.d.ts
+package-lock.json
+
+# Formatted independently by their own project (own devDependencies/config)
+dashboard/
+.github/actions/report/

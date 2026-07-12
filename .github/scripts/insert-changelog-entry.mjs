@@ -30,13 +30,8 @@ const linksAndAfter = lines.slice(linkIndex);
 
 const newLink = `[${version}]: https://github.com/${repo}/releases/tag/v${version}`;
 
-const output = [
-  ...before,
-  ...section.split('\n'),
-  '',
-  ...middle,
-  newLink,
-  ...linksAndAfter,
-].join('\n');
+const output = [...before, ...section.split('\n'), '', ...middle, newLink, ...linksAndAfter].join(
+  '\n',
+);
 
 writeFileSync(changelogPath, output.endsWith('\n') ? output : output + '\n');

@@ -25,7 +25,9 @@ export type CoverageColumn =
   | 'maintainability';
 
 export function metricToColumn(metric: string): { column: CoverageColumn; unit: string } | null {
-  return (METRIC_COLUMN_MAP as Record<string, { column: CoverageColumn; unit: string }>)[metric] ?? null;
+  return (
+    (METRIC_COLUMN_MAP as Record<string, { column: CoverageColumn; unit: string }>)[metric] ?? null
+  );
 }
 
 /** Read the right column value from a typed coverage row. */

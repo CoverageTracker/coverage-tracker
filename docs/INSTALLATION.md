@@ -57,9 +57,9 @@ Copy the `database_id` from the output into the `d1_databases` entry of `wrangle
     {
       "binding": "DB",
       "database_name": "coverage",
-      "database_id": "paste-your-id-here",   // ← add this line
-      "migrations_dir": "migrations"
-    }
+      "database_id": "paste-your-id-here", // ← add this line
+      "migrations_dir": "migrations",
+    },
   ],
   // ...
 }
@@ -128,7 +128,7 @@ You will create **two** Access applications for the same hostname. The Dashboard
 
 > [!WARNING]
 > **Critical invariant**
-> Never put an Access *Allow* policy on `/api/*`. Machine callers (CI OIDC, webhooks, health) must reach the Worker unauthenticated at the edge — API auth is enforced in code. The bypass only removes the edge OAuth redirect; no `/api/*` route is left unprotected.
+> Never put an Access _Allow_ policy on `/api/*`. Machine callers (CI OIDC, webhooks, health) must reach the Worker unauthenticated at the edge — API auth is enforced in code. The bypass only removes the edge OAuth redirect; no `/api/*` route is left unprotected.
 
 ---
 

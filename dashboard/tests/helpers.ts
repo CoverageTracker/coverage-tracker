@@ -39,9 +39,7 @@ export const MOCK_GROUPED_TREND_EMPTY = {
  */
 export async function mockApi(page: Page): Promise<void> {
   // Catch-all registered first = lowest priority; absorbs unmocked /api/* requests
-  await page.route('**/api/**', (route) =>
-    route.fulfill({ status: 404, body: 'Not found' }),
-  );
+  await page.route('**/api/**', (route) => route.fulfill({ status: 404, body: 'Not found' }));
   // Specific routes registered last = highest priority (override the catch-all).
   // metrics/categories is registered before metrics* since Playwright glob `*`
   // does not cross `/` — the two never actually collide, but keeping the more
@@ -52,7 +50,5 @@ export async function mockApi(page: Page): Promise<void> {
   await page.route('**/api/projects/testorg/repo/metrics*', (route) =>
     route.fulfill({ json: MOCK_TREND_EMPTY }),
   );
-  await page.route('**/api/projects', (route) =>
-    route.fulfill({ json: [MOCK_PROJECT] }),
-  );
+  await page.route('**/api/projects', (route) => route.fulfill({ json: [MOCK_PROJECT] }));
 }

@@ -13,11 +13,10 @@ const RS = '\x1e';
 const FS = '\x1f';
 const range = prevTag ? `${prevTag}..HEAD` : 'HEAD';
 
-const raw = execFileSync(
-  'git',
-  ['log', range, '--no-merges', `--pretty=%H${FS}%s${FS}%b${RS}`],
-  { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32 },
-);
+const raw = execFileSync('git', ['log', range, '--no-merges', `--pretty=%H${FS}%s${FS}%b${RS}`], {
+  encoding: 'utf8',
+  maxBuffer: 1024 * 1024 * 32,
+});
 
 const commits = raw
   .split(RS)

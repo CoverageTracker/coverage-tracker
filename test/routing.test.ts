@@ -10,7 +10,7 @@ describe('routing', () => {
   it('GET /api/health returns 200', async () => {
     const res = await worker.fetch(new Request('http://localhost/api/health'), env as never);
     expect(res.status).toBe(200);
-    const body = await res.json() as { status: string };
+    const body = (await res.json()) as { status: string };
     expect(body.status).toBe('ok');
   });
 
@@ -79,7 +79,7 @@ describe('routing', () => {
           testEnv as never,
         );
         expect(res.status).toBe(400);
-        const body = await res.json() as { error: string };
+        const body = (await res.json()) as { error: string };
         expect(body.error).toBe('Invalid branch');
       } finally {
         delete (testEnv as Record<string, unknown>).ENVIRONMENT;

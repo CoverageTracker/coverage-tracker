@@ -60,7 +60,8 @@
           aria-selected={data.metric === m}
           class:active={data.metric === m}
           onclick={() => updateParams({ metric: m })}
-        >{m.charAt(0).toUpperCase() + m.slice(1)}</button>
+          >{m.charAt(0).toUpperCase() + m.slice(1)}</button
+        >
       {/each}
     </div>
 
@@ -70,8 +71,8 @@
           role="tab"
           aria-selected={data.range === r.key}
           class:active={data.range === r.key}
-          onclick={() => updateParams({ range: r.key })}
-        >{r.label}</button>
+          onclick={() => updateParams({ range: r.key })}>{r.label}</button
+        >
       {/each}
     </div>
 
@@ -88,11 +89,7 @@
         <button type="submit">Go</button>
       </form>
 
-      <button
-        class="badge-btn"
-        onclick={() => (badgeModalOpen = true)}
-        aria-haspopup="dialog"
-      >
+      <button class="badge-btn" onclick={() => (badgeModalOpen = true)} aria-haspopup="dialog">
         Create status badge
       </button>
     </div>
@@ -126,7 +123,8 @@
                     style="background:{metricChartColor}28; color:{metricChartColor}"
                     aria-label="{delta >= 0 ? 'up' : 'down'} {Math.abs(delta).toFixed(1)}{unit}"
                   >
-                    {delta >= 0 ? '▲' : '▼'} {delta >= 0 ? '+' : ''}{delta.toFixed(1)}{unit}
+                    {delta >= 0 ? '▲' : '▼'}
+                    {delta >= 0 ? '+' : ''}{delta.toFixed(1)}{unit}
                   </span>
                 {/if}
               {/if}
@@ -138,7 +136,7 @@
             <TrendChart
               data={cat.data}
               metric={data.metric}
-              unit={unit}
+              {unit}
               color={metricChartColor}
               borderColor={theme.tokens.border}
               mutedColor={theme.tokens.muted}

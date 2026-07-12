@@ -69,10 +69,19 @@ api.get('/projects/:owner/:repo/metrics/categories', requireAccess(), async (c) 
   let points;
   if (range !== undefined) {
     if (!isRangeKey(range)) {
-      return c.json({ error: 'Validation failed', issues: [{ message: `Unknown range: ${range}` }] }, 422);
+      return c.json(
+        { error: 'Validation failed', issues: [{ message: `Unknown range: ${range}` }] },
+        422,
+      );
     }
     const align = c.req.query('align') === 'true';
-    points = await getCoverageTrendGroupedWindowed(c.env.DB, project.id, branch, RANGE_SECONDS[range], align);
+    points = await getCoverageTrendGroupedWindowed(
+      c.env.DB,
+      project.id,
+      branch,
+      RANGE_SECONDS[range],
+      align,
+    );
   } else {
     const limit = Math.min(Number(c.req.query('limit') ?? '100'), 1000);
     points = await getCoverageTrendGrouped(c.env.DB, project.id, branch, limit);
@@ -80,7 +89,13 @@ api.get('/projects/:owner/:repo/metrics/categories', requireAccess(), async (c) 
 
   const byCategory = new Map<
     string,
-    Array<{ commit_sha: string; value: number; unit: string; recorded_at: string; synthetic?: boolean }>
+    Array<{
+      commit_sha: string;
+      value: number;
+      unit: string;
+      recorded_at: string;
+      synthetic?: boolean;
+    }>
   >();
   for (const p of points) {
     const value = pickColumnValue(p, mapping.column);

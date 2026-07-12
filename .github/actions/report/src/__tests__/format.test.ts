@@ -14,9 +14,9 @@ describe('sniffCoverageFormat', () => {
   });
 
   it('detects Cobertura from the <coverage> root', () => {
-    expect(sniffCoverageFormat('<?xml version="1.0"?>\n<coverage line-rate="0.8"></coverage>')).toBe(
-      'cobertura',
-    );
+    expect(
+      sniffCoverageFormat('<?xml version="1.0"?>\n<coverage line-rate="0.8"></coverage>'),
+    ).toBe('cobertura');
   });
 
   it('detects JaCoCo from the <report> root', () => {

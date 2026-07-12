@@ -95,12 +95,12 @@ auto-detects the coverage report from the common default paths — zero config:
 ```yaml
 # .github/workflows/coverage.yml
 permissions:
-  id-token: write   # OIDC token for Worker auth
-  checks: write     # PR Check Run
+  id-token: write # OIDC token for Worker auth
+  checks: write # PR Check Run
 
 steps:
   - uses: actions/checkout@v4
-  - run: npm test -- --coverage        # writes coverage/lcov.info
+  - run: npm test -- --coverage # writes coverage/lcov.info
   - uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.4.0
     with:
       worker-url: https://coverage-tracker.yourdomain.com
@@ -194,17 +194,17 @@ curl -X PATCH https://coverage-tracker.yourdomain.com/api/admin/projects/1/badge
 
 ## API reference
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/api/ci/coverage` | OIDC token | Push typed coverage metrics from CI |
-| `GET` | `/api/projects` | Access | List all registered owners and repos |
-| `GET` | `/api/projects/:owner/:repo/metrics` | Access | Trend data for one repo |
-| `GET` | `/api/baseline/:owner/:repo` | OIDC token | Latest value on default branch (threshold checks) |
-| `GET` | `/api/badge/:owner/:repo/:metric.json` | Public | shields.io endpoint — only for `badge_enabled` repos |
-| `POST` | `/api/webhooks/github` | GitHub HMAC | GitHub App installation events |
-| `POST` | `/api/admin/resync` | Access | Reconcile projects table against GitHub |
-| `PATCH` | `/api/admin/projects/:id/badge` | Access | Toggle badge visibility |
-| `GET` | `/api/health` | Public | Liveness check |
+| Method  | Path                                   | Auth        | Description                                          |
+| ------- | -------------------------------------- | ----------- | ---------------------------------------------------- |
+| `POST`  | `/api/ci/coverage`                     | OIDC token  | Push typed coverage metrics from CI                  |
+| `GET`   | `/api/projects`                        | Access      | List all registered owners and repos                 |
+| `GET`   | `/api/projects/:owner/:repo/metrics`   | Access      | Trend data for one repo                              |
+| `GET`   | `/api/baseline/:owner/:repo`           | OIDC token  | Latest value on default branch (threshold checks)    |
+| `GET`   | `/api/badge/:owner/:repo/:metric.json` | Public      | shields.io endpoint — only for `badge_enabled` repos |
+| `POST`  | `/api/webhooks/github`                 | GitHub HMAC | GitHub App installation events                       |
+| `POST`  | `/api/admin/resync`                    | Access      | Reconcile projects table against GitHub              |
+| `PATCH` | `/api/admin/projects/:id/badge`        | Access      | Toggle badge visibility                              |
+| `GET`   | `/api/health`                          | Public      | Liveness check                                       |
 
 ### `/api/ci/coverage` payload
 
@@ -253,12 +253,12 @@ npm run deploy
 
 See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 1–6 | Core Worker, webhooks, dashboard, reporting Action | Complete |
-| — | Convergence refactor (single Worker + static assets) | Complete |
-| 7 | "Deploy to Cloudflare" button | In progress |
-| 8 | Docs, OSS hygiene, public release | In progress |
+| Phase | Description                                          | Status      |
+| ----- | ---------------------------------------------------- | ----------- |
+| 1–6   | Core Worker, webhooks, dashboard, reporting Action   | Complete    |
+| —     | Convergence refactor (single Worker + static assets) | Complete    |
+| 7     | "Deploy to Cloudflare" button                        | In progress |
+| 8     | Docs, OSS hygiene, public release                    | In progress |
 
 ---
 

@@ -4,7 +4,7 @@ Operating manual for **coverage-tracker**. Read this first every session. For th
 
 ## What this is
 
-A self-hostable, open-source (MIT) code-quality dashboard. **One instance per deployer, not multi-tenant.** A single Cloudflare Worker serves the SPA dashboard *and* the API from one apex domain, backed by D1. CI jobs push coverage/complexity metrics; the dashboard reads trends.
+A self-hostable, open-source (MIT) code-quality dashboard. **One instance per deployer, not multi-tenant.** A single Cloudflare Worker serves the SPA dashboard _and_ the API from one apex domain, backed by D1. CI jobs push coverage/complexity metrics; the dashboard reads trends.
 
 ## Architecture invariants
 
@@ -19,13 +19,13 @@ A self-hostable, open-source (MIT) code-quality dashboard. **One instance per de
 
 ## Auth model (per route)
 
-| Route | Edge (Cloudflare Access) | In-code |
-|---|---|---|
-| Dashboard SPA (`/`, `/dashboard*`) | **Access-protected** | — |
-| `/api/health` | none | none (public) |
-| `/api/ci/coverage` | none | GitHub Actions **OIDC** (jose, JWKS) |
-| `/api/webhooks/github` | none | GitHub App **HMAC** (`X-Hub-Signature-256`) |
-| `/api/projects/*` | none | **Cloudflare Access JWT** (`Cf-Access-Jwt-Assertion`, verify `aud`) |
+| Route                              | Edge (Cloudflare Access) | In-code                                                             |
+| ---------------------------------- | ------------------------ | ------------------------------------------------------------------- |
+| Dashboard SPA (`/`, `/dashboard*`) | **Access-protected**     | —                                                                   |
+| `/api/health`                      | none                     | none (public)                                                       |
+| `/api/ci/coverage`                 | none                     | GitHub Actions **OIDC** (jose, JWKS)                                |
+| `/api/webhooks/github`             | none                     | GitHub App **HMAC** (`X-Hub-Signature-256`)                         |
+| `/api/projects/*`                  | none                     | **Cloudflare Access JWT** (`Cf-Access-Jwt-Assertion`, verify `aud`) |
 
 ## Guardrails (do not violate)
 

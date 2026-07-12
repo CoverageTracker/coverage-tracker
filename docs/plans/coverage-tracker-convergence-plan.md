@@ -13,16 +13,16 @@ Serve the dashboard SPA and the API from the **same apex domain** out of **one W
 
 ## 2. Current → Target state
 
-| Aspect | Current | Target |
-|---|---|---|
-| Frontend hosting | Cloudflare Pages project on apex | Static assets served by the Worker (`assets.directory`) |
-| API hosting | Separate Worker(s) / Pages Functions | Same Worker, `/api/*` routed via `run_worker_first` |
-| Config files | Pages config + Worker `wrangler.*` | Single `wrangler.json` |
-| Domain routing | Pages custom domain + Worker route precedence | One Worker custom domain on the apex |
-| Dashboard auth | Cloudflare Access (scoped apps already in place) | Cloudflare Access scoped to dashboard paths only |
-| API auth | per-Worker | In-code: OIDC (CI), HMAC (webhooks), none (health) |
-| Coverage storage | (new) | `coverage_runs` (pruned) + `coverage_daily` (permanent) |
-| Trend computation | (new) | Daily cron: last-of-day rollup → prune |
+| Aspect            | Current                                          | Target                                                  |
+| ----------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| Frontend hosting  | Cloudflare Pages project on apex                 | Static assets served by the Worker (`assets.directory`) |
+| API hosting       | Separate Worker(s) / Pages Functions             | Same Worker, `/api/*` routed via `run_worker_first`     |
+| Config files      | Pages config + Worker `wrangler.*`               | Single `wrangler.json`                                  |
+| Domain routing    | Pages custom domain + Worker route precedence    | One Worker custom domain on the apex                    |
+| Dashboard auth    | Cloudflare Access (scoped apps already in place) | Cloudflare Access scoped to dashboard paths only        |
+| API auth          | per-Worker                                       | In-code: OIDC (CI), HMAC (webhooks), none (health)      |
+| Coverage storage  | (new)                                            | `coverage_runs` (pruned) + `coverage_daily` (permanent) |
+| Trend computation | (new)                                            | Daily cron: last-of-day rollup → prune                  |
 
 ---
 
@@ -44,7 +44,7 @@ Serve the dashboard SPA and the API from the **same apex domain** out of **one W
 
 These touch the Cloudflare dashboard, DNS, secrets, or GitHub config and **cannot be done from the repo**. Claude Code should treat these as preconditions/post-conditions and **not** attempt them. Flag clearly in the cutover phase.
 
-1. **Secrets** (set via `wrangler secret put`, see §8). Claude Code may write the *names* into `wrangler.json`/types but must never commit values.
+1. **Secrets** (set via `wrangler secret put`, see §8). Claude Code may write the _names_ into `wrangler.json`/types but must never commit values.
 2. **Cloudflare Access apps**: after cutover, scope Access application(s) to the dashboard paths on the apex (e.g. `/`, `/dashboard*`), and ensure **no Access app covers `/api/*`** — machine callers (OIDC CI, webhooks, public health) must reach the Worker unauthenticated at the edge. This is the same scoped-app pattern already adopted; re-verify it against the new single-origin path layout.
 3. **Custom domain cutover**: detach the apex from the Pages project, attach it to the Worker (Workers custom domain). Brief downtime window — sequence per §7 Phase 9.
 4. **GitHub App / OAuth App**: webhook secret + (if dashboard login uses GitHub OAuth via Access) the OAuth app credentials. Existing config from the locked architecture; verify callback URLs still resolve on the converged origin.
@@ -100,18 +100,18 @@ These touch the Cloudflare dashboard, DNS, secrets, or GitHub config and **canno
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*"],
   },
   "observability": { "enabled": true },
-  "triggers": { "crons": ["30 6 * * *"] },   // 06:30 UTC daily
+  "triggers": { "crons": ["30 6 * * *"] }, // 06:30 UTC daily
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "coverage",
       "database_id": "<existing-id>",
-      "migrations_dir": "migrations"
-    }
-  ]
+      "migrations_dir": "migrations",
+    },
+  ],
 }
 ```
 
@@ -124,16 +124,19 @@ Run `wrangler types` after this lands to generate the `Bindings` interface — d
 Each phase is independently committable with its own acceptance check. Do them in order.
 
 ### Phase 0 — Branch & dependencies
+
 - Create branch `feat/converge-worker-assets`.
 - `npm i hono jose zod`. Confirm `wrangler` is v4+ (Workers Static Assets requires it; Workers Sites is deprecated and must not be used).
 - **Accept:** `npm ls hono jose zod wrangler` resolves; `wrangler --version` ≥ 4.
 
 ### Phase 1 — Wrangler convergence
+
 - Replace existing config with §6. Keep the existing `database_id`.
 - Verify `migrations/0001_projects.sql` (the `projects` table that webhook registration writes to) exists; `coverage_runs.project_id` FKs into it.
 - **Accept:** `wrangler deploy --dry-run` succeeds; `wrangler types` emits a `Bindings` type containing `ASSETS: Fetcher` and `DB: D1Database`.
 
 ### Phase 2 — Worker skeleton + auth middleware
+
 - `src/worker.ts` exports `{ fetch: app.fetch, scheduled }`.
 - `src/app.ts`: Hono app, mounts routes, **final catch-all** `app.all('*', c => c.env.ASSETS.fetch(c.req.raw))`.
 - `src/auth/oidc.ts`: middleware verifying GitHub Actions OIDC JWT via `createRemoteJWKSet('https://token.actions.githubusercontent.com/.well-known/jwks')`, issuer `https://token.actions.githubusercontent.com`, audience from `GITHUB_OIDC_AUDIENCE`. Optionally pin `payload.repository`/`repository_owner`. On failure → `401`.
@@ -141,22 +144,26 @@ Each phase is independently committable with its own acceptance check. Do them i
 - **Accept:** unit tests assert 401 on missing/garbage OIDC token and bad HMAC signature; a non-`/api` request falls through to `ASSETS`.
 
 ### Phase 3 — D1 migration
+
 - Author `migrations/0002_coverage.sql` exactly as §9.
 - Apply: `wrangler d1 migrations apply coverage --local` then `--remote`.
 - **Accept:** `coverage_runs`, `coverage_daily`, and the three indexes exist; FK to `projects` resolves.
 
 ### Phase 4 — Coverage ingest route
+
 - `src/routes/ci.ts`: `POST /api/ci/coverage`, behind OIDC middleware.
 - Validate body with the zod `CoverageReport` schema (§10). On invalid → `422` with issues.
 - Upsert into `coverage_runs` on conflict `(project_id, commit_sha)` (§10 SQL). Set `ran_at = unixepoch()`. Return `202`.
 - **Accept:** integration test (vitest-pool-workers, real D1) — valid payload inserts a row; re-POST of same `(project_id, commit_sha)` updates, does not duplicate; invalid payload → 422; missing OIDC → 401.
 
 ### Phase 5 — Scheduled rollup + prune
+
 - `src/db/rollup.ts`: `rollupAndPrune(env)` per §11 — snapshot last-of-day for runs older than `RETENTION_DAYS`, upsert into `coverage_daily`, then `DELETE FROM coverage_runs WHERE ran_at < cutoff`.
 - `worker.ts` `scheduled` handler wraps it in `ctx.waitUntil(...)`.
 - **Accept:** test seeds runs spanning >14 days with multiple runs/day; after `rollupAndPrune`, each old `(project, day)` has exactly one `coverage_daily` row equal to that day's latest run with correct `run_count`; old raw rows are gone; rows inside the window remain. Re-running is idempotent (no dup snapshots, no error).
 
 ### Phase 6 — Dashboard read path
+
 - `src/routes/dashboard-data.ts`: `GET /api/projects/:id/trend` returning a single ordered series that **unions** recent fine-grained points from `coverage_runs` with historical points from `coverage_daily` (recent window from runs, older from daily), ordered by day ascending. De-dup the boundary day in favor of the rollup.
 - This endpoint is under `/api/*` so it bypasses edge Access. **It must be gated in-code** by an Access JWT middleware (`src/auth/access.ts`) applied to all `/api/projects/*` routes:
   - Read the `Cf-Access-Jwt-Assertion` header (fall back to the `CF_Authorization` cookie). Missing → `401`.
@@ -166,11 +173,13 @@ Each phase is independently committable with its own acceptance check. Do them i
 - **Accept:** test with seeded runs + daily rows returns a contiguous, correctly ordered series with no duplicate boundary day. A request with no/invalid `Cf-Access-Jwt-Assertion` is rejected (401/403); a request with a valid Access assertion succeeds.
 
 ### Phase 7 — Tests
+
 - Use `@cloudflare/vitest-pool-workers` so tests run in the Workers runtime with real D1 bindings.
 - Confirm `nodejs_compat` is present in `wrangler.json` (the pool injects it for tests, masking a missing flag at deploy — verify explicitly).
 - **Accept:** `npm test` green; coverage of auth, ingest, rollup, routing.
 
 ### Phase 8 — CI ingest workflow
+
 - Add a GitHub Actions step (reusable) that:
   - requests an OIDC token with `permissions: id-token: write` and the configured audience,
   - parses the project's coverage report into the `CoverageReport` shape,
@@ -178,12 +187,15 @@ Each phase is independently committable with its own acceptance check. Do them i
 - **Accept:** dry-run against a preview deployment ingests a row; dashboard trend reflects it.
 
 ### Phase 9 — Cutover (sequenced; HUMAN executes the dashboard parts)
+
 Order matters to minimize downtime:
+
 1. Deploy the converged Worker **without** a custom domain (gets a `*.workers.dev` URL). Smoke-test SPA + all three API tiers there.
 2. **Human:** in Cloudflare Access, create/scope the dashboard Access app to the apex dashboard paths; confirm no app matches `/api/*`.
 3. **Human:** detach the apex from the Pages project; attach it as a Worker custom domain.
 4. Verify DNS/edge propagation; smoke-test the apex: dashboard prompts Access, `/api/health` is open, `/api/ci/coverage` accepts OIDC, webhook route validates HMAC.
 5. **Human:** once green, delete or archive the old Pages project and any now-dead Worker routes.
+
 - **Accept:** end-to-end checklist (§12) passes on the apex.
 
 ---
@@ -192,14 +204,14 @@ Order matters to minimize downtime:
 
 Set via `wrangler secret put <NAME>` (never committed). Reference by the same name in `Bindings`.
 
-| Name | Purpose |
-|---|---|
-| `GITHUB_OIDC_AUDIENCE` | Expected `aud` of the Actions OIDC token |
-| `GITHUB_WEBHOOK_SECRET` | HMAC key for GitHub App webhook signature |
-| `CF_ACCESS_TEAM_DOMAIN` | Access team domain, e.g. `<team>.cloudflareaccess.com` (JWKS + issuer) |
-| `CF_ACCESS_AUD` | Access application AUD tag, checked as the JWT `aud` for `/api/projects/*` |
-| `GITHUB_APP_*` | (existing) GitHub App credentials for project registration, as already defined |
-| OAuth/Access | Managed in Access + GitHub OAuth app config, not in the Worker |
+| Name                    | Purpose                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `GITHUB_OIDC_AUDIENCE`  | Expected `aud` of the Actions OIDC token                                       |
+| `GITHUB_WEBHOOK_SECRET` | HMAC key for GitHub App webhook signature                                      |
+| `CF_ACCESS_TEAM_DOMAIN` | Access team domain, e.g. `<team>.cloudflareaccess.com` (JWKS + issuer)         |
+| `CF_ACCESS_AUD`         | Access application AUD tag, checked as the JWT `aud` for `/api/projects/*`     |
+| `GITHUB_APP_*`          | (existing) GitHub App credentials for project registration, as already defined |
+| OAuth/Access            | Managed in Access + GitHub OAuth app config, not in the Worker                 |
 
 ---
 
@@ -247,6 +259,7 @@ CREATE TABLE IF NOT EXISTS coverage_daily (
 ## 10. Ingest contract
 
 **zod schema:**
+
 ```ts
 const CoverageReport = z.object({
   projectId: z.string().min(1),
@@ -258,10 +271,11 @@ const CoverageReport = z.object({
   cognitive: z.number().optional(),
   duplicationPct: z.number().min(0).max(100).optional(),
   maintainability: z.number().optional(),
-})
+});
 ```
 
 **Upsert:**
+
 ```sql
 INSERT INTO coverage_runs
   (project_id, commit_sha, branch, ran_at,

@@ -61,7 +61,9 @@ test.describe('project detail page — multiple categories', () => {
     expect(secondBox!.y).toBeGreaterThanOrEqual(firstBox!.y + firstBox!.height);
   });
 
-  test('has no WCAG 2.0 AA violations with two stacked category charts rendered', async ({ page }) => {
+  test('has no WCAG 2.0 AA violations with two stacked category charts rendered', async ({
+    page,
+  }) => {
     await expect(page.locator('.trend-card')).toHaveCount(2);
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa'])

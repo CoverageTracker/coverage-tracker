@@ -6,6 +6,12 @@
     "dev": "wrangler dev --env dev",
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint . \".github/scripts/**/*.mjs\"",
+    "lint:fix": "eslint . \".github/scripts/**/*.mjs\" --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "format:all": "npm run format && npm --prefix dashboard run format && npm --prefix .github/actions/report run format",
+    "format:all:check": "npm run format:check && npm --prefix dashboard run format:check && npm --prefix .github/actions/report run format:check",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "db:migrate:local": "wrangler d1 migrations apply DB --local --env dev",
@@ -19,9 +25,15 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.20",
+    "@eslint/js": "^9.0.0",
     "@types/node": "^26.0.1",
     "@vitest/coverage-istanbul": "^4.1.9",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.9.0",
+    "prettier": "^3.3.0",
     "typescript": "^5.6.3",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^4.1.9",
     "wrangler": "^4.104.0"
   }

@@ -1,6 +1,11 @@
 import { Hono } from 'hono';
 import { requireWebhookHmac } from '../middleware/webhook';
-import { upsertOwner, upsertProject, deleteProjectsByInstallation, deleteProjectByRepoId } from '../lib/db';
+import {
+  upsertOwner,
+  upsertProject,
+  deleteProjectsByInstallation,
+  deleteProjectByRepoId,
+} from '../lib/db';
 import { getInstallationToken, fetchRepoMetadata } from '../lib/github';
 import type { Bindings, Variables } from '../types';
 
@@ -57,15 +62,33 @@ async function handleInstallation(payload: Record<string, unknown>, env: Binding
       console.error(`Unexpected account type in installation payload: ${account.type}`);
       return;
     }
-    const ownerId = await upsertOwner(env.DB, account.id, account.login, account.type, account.avatar_url);
+    const ownerId = await upsertOwner(
+      env.DB,
+      account.id,
+      account.login,
+      account.type,
+      account.avatar_url,
+    );
 
     const repos = (payload.repositories as WebhookRepo[] | undefined) ?? [];
-    const instToken = await getInstallationToken(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY, installationId);
+    const instToken = await getInstallationToken(
+      env.GITHUB_APP_ID,
+      env.GITHUB_APP_PRIVATE_KEY,
+      installationId,
+    );
 
     for (const repo of repos) {
       // Fetch full metadata (including default_branch) for each repo
       const meta = await fetchRepoMetadata(instToken.token, repo.full_name);
-      await upsertProject(env.DB, ownerId, repo.id, repo.name, repo.full_name, installationId, meta.default_branch);
+      await upsertProject(
+        env.DB,
+        ownerId,
+        repo.id,
+        repo.name,
+        repo.full_name,
+        installationId,
+        meta.default_branch,
+      );
     }
   }
   // Other actions (suspend, unsuspend, new_permissions_accepted) are acknowledged and ignored
@@ -82,16 +105,36 @@ async function handleInstallationRepositories(
 
   if (action === 'added') {
     if (account.type !== 'User' && account.type !== 'Organization') {
-      console.error(`Unexpected account type in installation_repositories payload: ${account.type}`);
+      console.error(
+        `Unexpected account type in installation_repositories payload: ${account.type}`,
+      );
       return;
     }
-    const ownerId = await upsertOwner(env.DB, account.id, account.login, account.type, account.avatar_url);
+    const ownerId = await upsertOwner(
+      env.DB,
+      account.id,
+      account.login,
+      account.type,
+      account.avatar_url,
+    );
     const added = (payload.repositories_added as WebhookRepo[]) ?? [];
-    const instToken = await getInstallationToken(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY, installationId);
+    const instToken = await getInstallationToken(
+      env.GITHUB_APP_ID,
+      env.GITHUB_APP_PRIVATE_KEY,
+      installationId,
+    );
 
     for (const repo of added) {
       const meta = await fetchRepoMetadata(instToken.token, repo.full_name);
-      await upsertProject(env.DB, ownerId, repo.id, repo.name, repo.full_name, installationId, meta.default_branch);
+      await upsertProject(
+        env.DB,
+        ownerId,
+        repo.id,
+        repo.name,
+        repo.full_name,
+        installationId,
+        meta.default_branch,
+      );
     }
   } else if (action === 'removed') {
     const removed = (payload.repositories_removed as WebhookRepo[]) ?? [];
