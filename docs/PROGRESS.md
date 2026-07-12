@@ -16,12 +16,14 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 ## Phase 2 — Worker core ✅ Complete
 
 ### Auth middleware
+
 - [x] OIDC verification: RS256, pins `iss` + `aud=coverage-tracker`, JWKS cache with refetch-on-unknown-`kid` (A1, A8)
 - [x] Cloudflare Access JWT verification on all `/api` and `/admin` routes (A2)
 - [x] GitHub webhook HMAC verification: constant-time compare via `crypto.subtle.verify` (A5)
 - [x] `workers_dev = false` — no `.workers.dev` bypass (A2)
 
 ### Routes
+
 - [x] `POST /ingest` — derives `repository`/`branch`/`sha` from OIDC token claims, not body (A3); INSERT OR IGNORE for idempotency (A11)
 - [x] `GET /api/projects` — Access-gated
 - [x] `GET /api/projects/:owner/:repo/metrics` — Access-gated, trend data
@@ -29,6 +31,7 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 - [x] `GET /badge/:owner/:repo/:metric.json` — public, shields.io format; returns 404 for `badge_enabled=0` (A12)
 
 ### Security
+
 - [x] All D1 queries use `.prepare().bind()` — no string interpolation (A10)
 - [x] `.dev.vars` gitignored; `.dev.vars.example` committed as template (A9)
 - [x] `wrangler.json` gitignored; `wrangler.example.jsonc` committed as template
@@ -38,17 +41,20 @@ Tracks completion status for all phases defined in `docs/plans/coverage-tracker-
 ## Phase 3 — GitHub App webhooks ✅ Complete
 
 ### Webhook handler
+
 - [x] `POST /webhooks/github` — HMAC-verified, delivery ID dedup (A5)
 - [x] `installation: created` — upserts owner + all repos
 - [x] `installation: deleted` — removes all projects for the installation
 - [x] `installation_repositories: added/removed` — adds/removes individual projects
 
 ### Admin / resync
+
 - [x] `performResync()` as a shared function (callable from HTTP and future dashboard)
 - [x] `POST /admin/resync` — Access-gated, triggers reconciliation against GitHub API
 - [x] `PATCH /admin/projects/:id/badge` — Access-gated, toggles `badge_enabled`
 
 ### Deployment (live)
+
 - [x] Worker deployed to `demo.coveragetracker.dev`
 - [x] All `wrangler secret`s configured: `GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `CF_ACCESS_AUD`, `CF_ACCESS_TEAM_DOMAIN`
 - [x] GitHub App created, installed on CoverageTracker org (7 repos registered)

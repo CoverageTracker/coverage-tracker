@@ -1,18 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { getInstallationToken, fetchInstallationRepos, fetchRepoMetadata } from '../../src/lib/github';
+import {
+  getInstallationToken,
+  fetchInstallationRepos,
+  fetchRepoMetadata,
+} from '../../src/lib/github';
 import { getTestAppPrivateKeyPem } from '../helpers/crypto';
-import { FAILING_ACCESS_TOKEN_INSTALLATION_ID, NOT_FOUND_REPO_FULL_NAME } from '../helpers/outbound';
+import {
+  FAILING_ACCESS_TOKEN_INSTALLATION_ID,
+  NOT_FOUND_REPO_FULL_NAME,
+} from '../helpers/outbound';
 
 describe('getInstallationToken', () => {
   it('mints a token for a valid installation', async () => {
-    const { token, expiresAt } = await getInstallationToken('test-app-id', getTestAppPrivateKeyPem(), 100);
+    const { token, expiresAt } = await getInstallationToken(
+      'test-app-id',
+      getTestAppPrivateKeyPem(),
+      100,
+    );
     expect(token).toBe('mock-token-100');
     expect(new Date(expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
 
   it('throws when GitHub fails to mint the token', async () => {
     await expect(
-      getInstallationToken('test-app-id', getTestAppPrivateKeyPem(), FAILING_ACCESS_TOKEN_INSTALLATION_ID),
+      getInstallationToken(
+        'test-app-id',
+        getTestAppPrivateKeyPem(),
+        FAILING_ACCESS_TOKEN_INSTALLATION_ID,
+      ),
     ).rejects.toThrow(/Failed to mint installation token/);
   });
 });

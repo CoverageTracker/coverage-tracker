@@ -67,7 +67,10 @@
 
   function buildChart() {
     chart?.destroy();
-    if (data.length === 0 || !container) { chart = null; return; }
+    if (data.length === 0 || !container) {
+      chart = null;
+      return;
+    }
 
     const timestamps = data.map((p) => new Date(p.recorded_at).getTime() / 1000);
     const values = data.map((p) => p.value);

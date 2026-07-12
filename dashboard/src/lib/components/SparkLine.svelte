@@ -3,25 +3,28 @@
   import 'uplot/dist/uPlot.min.css';
   import { gradientFill } from '../chartFill';
 
-  let {
-    timestamps,
-    values,
-    color,
-  }: { timestamps: number[]; values: number[]; color: string } = $props();
+  let { timestamps, values, color }: { timestamps: number[]; values: number[]; color: string } =
+    $props();
 
   let container: HTMLDivElement;
   let chart: uPlot | null = null;
 
   function buildChart(c: string) {
     chart?.destroy();
-    if (timestamps.length < 2 || !container) { chart = null; return; }
+    if (timestamps.length < 2 || !container) {
+      chart = null;
+      return;
+    }
 
     chart = new uPlot(
       {
         width: 150,
         height: 44,
         padding: [4, 0, 4, 0],
-        axes: [{ show: false, size: 0 }, { show: false, size: 0 }],
+        axes: [
+          { show: false, size: 0 },
+          { show: false, size: 0 },
+        ],
         scales: { x: { time: true } },
         legend: { show: false },
         cursor: { show: false },
@@ -43,7 +46,10 @@
 
   $effect(() => {
     buildChart(color);
-    return () => { chart?.destroy(); chart = null; };
+    return () => {
+      chart?.destroy();
+      chart = null;
+    };
   });
 </script>
 

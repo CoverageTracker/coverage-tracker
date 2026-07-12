@@ -15,25 +15,25 @@ Format is detected automatically from file content — you don't set it explicit
 
 ## Coverage
 
-| Language | Tool | Format | Command | Default path |
-|---|---|---|---|---|
-| Go | `go tool cover` | native profile | `go test -coverprofile=coverage.out ./...` | `coverage.out` |
-| Python | coverage.py | LCOV | `coverage run -m pytest && coverage lcov -o coverage.lcov` | `coverage.lcov` |
-| JS/TS | Istanbul (nyc / vitest / jest) | LCOV | `vitest run --coverage --coverage.reporter=lcov` | `coverage/lcov.info` |
-| Rust | cargo-llvm-cov | LCOV | `cargo llvm-cov --lcov --output-path lcov.info` | `lcov.info` |
-| C/C++ | gcovr | LCOV | `gcovr --lcov -o coverage.lcov` | `coverage.lcov` |
-| C# | coverlet | LCOV | `dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov` | `coverage.info` |
-| Java | JaCoCo | JaCoCo XML | `mvn test jacoco:report` (Maven) or `./gradlew jacocoTestReport` (Gradle) | `target/site/jacoco/jacoco.xml` / `build/reports/jacoco/test/jacocoTestReport.xml` |
-| Bash | kcov | Cobertura | `kcov --include-path=. coverage/ ./script.sh` | *dynamic — set `coverage-path`* |
-| Clojure | Cloverage | LCOV | `lein cloverage --lcov` | `target/coverage/lcov.info` |
-| Dart | Flutter test / `coverage` pkg | LCOV | `flutter test --coverage` | `coverage/lcov.info` |
-| Elixir | ExCoveralls | LCOV | `mix coveralls.lcov` | `cover/lcov.info` |
-| Erlang | covertool | Cobertura | `rebar3 do eunit, cover, covertool generate` | *dynamic — set `coverage-path`* |
-| Haskell | hpc + hpc-codecov | LCOV | `cabal test --enable-coverage && hpc-codecov cabal:all -f lcov -o lcov.info` | `lcov.info` |
-| Lua | LuaCov + `luacov-reporter-lcov` | LCOV | `luacov -r lcov` | `luacov.report.out` |
-| Perl | Devel::Cover + lcov's `perl2lcov` | LCOV | `cover -test && perl2lcov -o coverage.lcov` | `coverage.lcov` |
-| PHP | PHPUnit | Cobertura | `XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-cobertura=coverage.xml` | `coverage.xml` |
-| Ruby | SimpleCov + `simplecov-lcov` | LCOV | (configure `SimpleCov::Formatter::LcovFormatter` in `spec_helper.rb`) then `rspec` | `coverage/lcov.info` |
+| Language | Tool                              | Format         | Command                                                                            | Default path                                                                       |
+| -------- | --------------------------------- | -------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Go       | `go tool cover`                   | native profile | `go test -coverprofile=coverage.out ./...`                                         | `coverage.out`                                                                     |
+| Python   | coverage.py                       | LCOV           | `coverage run -m pytest && coverage lcov -o coverage.lcov`                         | `coverage.lcov`                                                                    |
+| JS/TS    | Istanbul (nyc / vitest / jest)    | LCOV           | `vitest run --coverage --coverage.reporter=lcov`                                   | `coverage/lcov.info`                                                               |
+| Rust     | cargo-llvm-cov                    | LCOV           | `cargo llvm-cov --lcov --output-path lcov.info`                                    | `lcov.info`                                                                        |
+| C/C++    | gcovr                             | LCOV           | `gcovr --lcov -o coverage.lcov`                                                    | `coverage.lcov`                                                                    |
+| C#       | coverlet                          | LCOV           | `dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov`                 | `coverage.info`                                                                    |
+| Java     | JaCoCo                            | JaCoCo XML     | `mvn test jacoco:report` (Maven) or `./gradlew jacocoTestReport` (Gradle)          | `target/site/jacoco/jacoco.xml` / `build/reports/jacoco/test/jacocoTestReport.xml` |
+| Bash     | kcov                              | Cobertura      | `kcov --include-path=. coverage/ ./script.sh`                                      | _dynamic — set `coverage-path`_                                                    |
+| Clojure  | Cloverage                         | LCOV           | `lein cloverage --lcov`                                                            | `target/coverage/lcov.info`                                                        |
+| Dart     | Flutter test / `coverage` pkg     | LCOV           | `flutter test --coverage`                                                          | `coverage/lcov.info`                                                               |
+| Elixir   | ExCoveralls                       | LCOV           | `mix coveralls.lcov`                                                               | `cover/lcov.info`                                                                  |
+| Erlang   | covertool                         | Cobertura      | `rebar3 do eunit, cover, covertool generate`                                       | _dynamic — set `coverage-path`_                                                    |
+| Haskell  | hpc + hpc-codecov                 | LCOV           | `cabal test --enable-coverage && hpc-codecov cabal:all -f lcov -o lcov.info`       | `lcov.info`                                                                        |
+| Lua      | LuaCov + `luacov-reporter-lcov`   | LCOV           | `luacov -r lcov`                                                                   | `luacov.report.out`                                                                |
+| Perl     | Devel::Cover + lcov's `perl2lcov` | LCOV           | `cover -test && perl2lcov -o coverage.lcov`                                        | `coverage.lcov`                                                                    |
+| PHP      | PHPUnit                           | Cobertura      | `XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-cobertura=coverage.xml`        | `coverage.xml`                                                                     |
+| Ruby     | SimpleCov + `simplecov-lcov`      | LCOV           | (configure `SimpleCov::Formatter::LcovFormatter` in `spec_helper.rb`) then `rspec` | `coverage/lcov.info`                                                               |
 
 > [!NOTE]
 > **Go is parsed directly**
@@ -69,12 +69,12 @@ If nothing is found, the Action fails with an error that lists every path it pro
 
 Only coverage is required. Complexity and duplication are opt-in: set the path explicitly (`complexity-path` / `duplication-path`), or write the report to the default location below and the Action picks it up automatically.
 
-| Metric | Tool | Command | Default path |
-|---|---|---|---|
-| Complexity — Go | gocyclo | `gocyclo -avg ./... > gocyclo.txt` | `gocyclo.txt` |
-| Complexity — Python | Radon | `radon cc -j . > radon.json` | `radon.json` |
-| Complexity — everything else | [Lizard](https://github.com/terryyin/lizard) | `lizard --xml > lizard-report.xml` | `lizard-report.xml` |
-| Duplication — any language | [jscpd](https://github.com/kucherenko/jscpd) | `npx jscpd . --reporters json --output ./jscpd-report` | `jscpd-report/jscpd-report.json` |
+| Metric                       | Tool                                         | Command                                                | Default path                     |
+| ---------------------------- | -------------------------------------------- | ------------------------------------------------------ | -------------------------------- |
+| Complexity — Go              | gocyclo                                      | `gocyclo -avg ./... > gocyclo.txt`                     | `gocyclo.txt`                    |
+| Complexity — Python          | Radon                                        | `radon cc -j . > radon.json`                           | `radon.json`                     |
+| Complexity — everything else | [Lizard](https://github.com/terryyin/lizard) | `lizard --xml > lizard-report.xml`                     | `lizard-report.xml`              |
+| Duplication — any language   | [jscpd](https://github.com/kucherenko/jscpd) | `npx jscpd . --reporters json --output ./jscpd-report` | `jscpd-report/jscpd-report.json` |
 
 There is no `complexity-tool` input — Radon (JSON), gocyclo (plain text), and Lizard (XML) are recognized by content shape. When probing finds more than one complexity file, precedence is `radon.json` → `gocyclo.txt` → `lizard-report.xml`; an explicit `complexity-path` overrides probing entirely.
 
@@ -90,12 +90,12 @@ There is no `complexity-tool` input — Radon (JSON), gocyclo (plain text), and 
 
 Cobertura XML is a shared DTD, not an enforced spec — generators disagree on two things the reporter corrects for based on `coverage-tool`:
 
-| `coverage-tool` | Trust `branch-rate`? | Notes |
-|---|---|---|
-| `gocover-cobertura` | No — always `0` | Go's block-based coverage can't map to branches |
-| `kcov` | Yes | |
-| `covertool` | Yes | |
-| `phpunit` | Yes | |
-| `gcovr` | Yes | |
+| `coverage-tool`     | Trust `branch-rate`? | Notes                                           |
+| ------------------- | -------------------- | ----------------------------------------------- |
+| `gocover-cobertura` | No — always `0`      | Go's block-based coverage can't map to branches |
+| `kcov`              | Yes                  |                                                 |
+| `covertool`         | Yes                  |                                                 |
+| `phpunit`           | Yes                  |                                                 |
+| `gcovr`             | Yes                  |                                                 |
 
 If your `coverage-tool` isn't listed, the reporter treats `branch-rate` as trustworthy by default — open an issue if that's wrong for your generator.

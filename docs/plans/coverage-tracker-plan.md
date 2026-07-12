@@ -42,16 +42,16 @@ Keep this model front-of-mind: it is the reason auth and data isolation stay sim
 Phases, in eventual build order. **Only Phase 1–3 (core) are in scope right now**; the rest
 are documented so current designs accommodate them.
 
-| Phase | Scope | Status |
-|-------|-------|--------|
-| 1 | D1 schema (multi-project from day one) | ✅ complete |
-| 2 | Worker core: ingest (OIDC-verified), metrics read, badge | ✅ complete |
-| 3 | GitHub App registration webhooks → projects table | ✅ complete |
-| 4 | Thresholds + PR diff checks (reporting Action logic) | ✅ complete |
-| 5 | Svelte dashboard on Cloudflare Pages, behind Access | not started |
-| 6 | Reusable composite reporting Action (in this repo) | ✅ complete |
-| 7 | "Deploy to Cloudflare" button + one-click onboarding | not started |
-| 8 | Docs, OSS hygiene, public release | 🔶 in progress |
+| Phase | Scope                                                    | Status         |
+| ----- | -------------------------------------------------------- | -------------- |
+| 1     | D1 schema (multi-project from day one)                   | ✅ complete    |
+| 2     | Worker core: ingest (OIDC-verified), metrics read, badge | ✅ complete    |
+| 3     | GitHub App registration webhooks → projects table        | ✅ complete    |
+| 4     | Thresholds + PR diff checks (reporting Action logic)     | ✅ complete    |
+| 5     | Svelte dashboard on Cloudflare Pages, behind Access      | not started    |
+| 6     | Reusable composite reporting Action (in this repo)       | ✅ complete    |
+| 7     | "Deploy to Cloudflare" button + one-click onboarding     | not started    |
+| 8     | Docs, OSS hygiene, public release                        | 🔶 in progress |
 
 ---
 
@@ -92,7 +92,7 @@ are documented so current designs accommodate them.
    because the tool is public and self-deployable: without the registered-project check,
    any repo's CI could push fake data. **No static ingest secret** anywhere.
 3. **Project registration (GitHub App installation)** — a lightweight GitHub App that the
-   deployer installs on the repos/orgs they want tracked. Installing the App *is* the
+   deployer installs on the repos/orgs they want tracked. Installing the App _is_ the
    registration step. Its webhooks populate the `owners`/`projects` tables.
 
 ---
@@ -150,6 +150,7 @@ CREATE INDEX idx_metrics_latest
 ```
 
 Design notes:
+
 - Key on GitHub **numeric ids** (`github_id`, `github_repo_id`), not logins/slugs, so renames
   don't orphan data. Keep `full_slug` denormalized only as a fast lookup path from the OIDC
   `repository` claim.
@@ -165,16 +166,17 @@ Design notes:
 
 Router skeleton. Each route's auth requirement is explicit — **enforce it, don't assume**.
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| POST | `/ingest` | OIDC + project check | Insert a metrics datapoint (push on main) |
-| GET | `/api/projects` | Access (browser session) | List owners → repos for dashboard |
-| GET | `/api/projects/:owner/:repo/metrics` | Access | Trend data for one repo |
-| GET | `/api/projects/:owner/:repo/baseline` | OIDC + project check | Baseline value for threshold/PR checks |
-| GET | `/badge/:owner/:repo/:metric.json` | **public** | Single number, shields.io endpoint format |
-| POST | `/webhooks/github` | GitHub webhook HMAC | App install events → owners/projects sync |
+| Method | Path                                  | Auth                     | Purpose                                   |
+| ------ | ------------------------------------- | ------------------------ | ----------------------------------------- |
+| POST   | `/ingest`                             | OIDC + project check     | Insert a metrics datapoint (push on main) |
+| GET    | `/api/projects`                       | Access (browser session) | List owners → repos for dashboard         |
+| GET    | `/api/projects/:owner/:repo/metrics`  | Access                   | Trend data for one repo                   |
+| GET    | `/api/projects/:owner/:repo/baseline` | OIDC + project check     | Baseline value for threshold/PR checks    |
+| GET    | `/badge/:owner/:repo/:metric.json`    | **public**               | Single number, shields.io endpoint format |
+| POST   | `/webhooks/github`                    | GitHub webhook HMAC      | App install events → owners/projects sync |
 
 Critical auth notes:
+
 - `/badge/...` is the **only** intentionally-public data route, and it returns exactly one
   number in shields.io endpoint format. Everything else with real data is gated.
 - `/api/projects/:owner/:repo/baseline` must be **OIDC-gated, project-scoped** — NOT public.
@@ -193,9 +195,9 @@ Critical auth notes:
   "branch": "main",
   "commit_sha": "abc123...",
   "metrics": [
-    { "name": "coverage",    "value": 82.4, "unit": "%" },
-    { "name": "complexity",  "value": 4.2,  "unit": "score" },
-    { "name": "duplication", "value": 1.8,  "unit": "%" }
+    { "name": "coverage", "value": 82.4, "unit": "%" },
+    { "name": "complexity", "value": 4.2, "unit": "score" },
+    { "name": "duplication", "value": 1.8, "unit": "%" }
   ]
 }
 ```
@@ -251,16 +253,16 @@ Not in the current core build, but the schema and routes above must already supp
 - **Composite reporting Action**: in this repo at `.github/actions/report/`. Wraps the
   collection script + OIDC POST. Inputs: `worker-url`, threshold knobs. Version-locked to
   the Worker by tagging the whole repo together. **Testing strategy (three layers, decided):**
-  - *Layer 1 (prerequisite):* vitest unit tests for the pure helpers in `src/run.ts`
+  - _Layer 1 (prerequisite):_ vitest unit tests for the pure helpers in `src/run.ts`
     (`parseThreshold`, `buildSummary`, etc.). vitest's `json-summary` coverage reporter
     emits `coverage/coverage-summary.json` in the Istanbul shape `collect.sh` already
     parses — the Action dogfoods itself, and the self-test workflow reads real coverage
     instead of a hardcoded fake.
-  - *Layer 2:* a committed bash fixture script (`test/collect-parsers.sh`) that pipes sample
+  - _Layer 2:_ a committed bash fixture script (`test/collect-parsers.sh`) that pipes sample
     tool output through each inline Python parser in `collect.sh` and asserts the result.
     This is the only way to cover the Go/Python/lizard parser branches, since those tools
     are absent from this repo's CI environment.
-  - *Layer 3 (follow-on):* `@cloudflare/vitest-pool-workers` Worker route tests — OIDC
+  - _Layer 3 (follow-on):_ `@cloudflare/vitest-pool-workers` Worker route tests — OIDC
     middleware rejection cases, ingest idempotency, baseline gating. Real setup cost;
     does not block the self-test.
   - Self-test workflow: `.github/workflows/action-test.yml` in this repo, using the local
@@ -317,10 +319,11 @@ of endpoints or payload shapes. Findings are ordered by severity.
 
 The plan says "verify signature against JWKS + check `repository`/`ref`." That is necessary but
 **not sufficient**. A GitHub Actions OIDC token is a general-purpose credential; its default
-audience is the repo owner's URL, and the *same* repo's CI could mint a validly-signed token for
-some *other* service and have it replayed against `/ingest`.
+audience is the repo owner's URL, and the _same_ repo's CI could mint a validly-signed token for
+some _other_ service and have it replayed against `/ingest`.
 
 Required, in addition to signature:
+
 - **Pin `iss`** to exactly `https://token.actions.githubusercontent.com`. Reject anything else.
 - **Require a custom `aud`** — set a fixed audience (e.g. the deployer's Worker URL or a constant
   like `coverage-tracker`) and have the Action request that exact audience via
@@ -331,12 +334,13 @@ Required, in addition to signature:
 
 ### A2. (CRITICAL) Cloudflare Access only protects the hostname — the raw `workers.dev` URL bypasses it
 
-Access gates the *route/hostname* it's configured on. The underlying `*.workers.dev` URL (and any
+Access gates the _route/hostname_ it's configured on. The underlying `*.workers.dev` URL (and any
 unprotected custom route) stays directly reachable, so anyone hitting the Worker URL directly skips
 Access entirely and reaches `/api/projects`, `/api/.../metrics`, etc. — all the gated, private
 coverage data.
 
 Fix (do both):
+
 - In the Worker, **verify the `Cf-Access-Jwt-Assertion` header** on every Access-gated route:
   validate it against your Access application's public keys (the team's `/cdn-cgi/access/certs`)
   and check the `aud` matches your Access app. Do not trust "Access is in front of me."
@@ -356,6 +360,7 @@ refs for the persist-on-default-branch rule rather than mis-parsing a tag as a b
 
 Minting installation tokens (for resync and Check Runs) requires the App private key. Two
 requirements the plan currently omits:
+
 - Store it **only** as a `wrangler secret`, never in source (public repo — a committed key is a
   permanent leak even after deletion; rotation would be mandatory).
 - **Scope App permissions minimally.** Registration needs only repository `metadata: read`.
@@ -368,6 +373,7 @@ requirements the plan currently omits:
 `/webhooks/github` is public; the HMAC is its only gate, and it is load-bearing (a forged
 `installation: created` could register arbitrary repos, which then authorizes those repos' OIDC
 tokens to ingest). Two pitfalls:
+
 - Compare the computed and received signatures with a **timing-safe** comparison (`crypto.subtle`
   / equivalent), never `===` — naive comparison is a known signature-bypass vector.
 - Consider lightweight **replay protection** by deduping on GitHub's `X-GitHub-Delivery` id, so a
@@ -375,10 +381,10 @@ tokens to ingest). Two pitfalls:
 
 ### A6. (MEDIUM) The manual resync path needs a defined auth model
 
-The plan leaves resync as "an authenticated endpoint *or* a wrangler script." As an unauthenticated
+The plan leaves resync as "an authenticated endpoint _or_ a wrangler script." As an unauthenticated
 HTTP endpoint it's an abuse vector (forces installation-token API calls, can rewrite the projects
 table). Pick one: make it a **`wrangler`-invoked script** that uses bindings directly with no public
-HTTP surface (preferred), or if it must be HTTP, gate it behind Access *and* verify the Access JWT
+HTTP surface (preferred), or if it must be HTTP, gate it behind Access _and_ verify the Access JWT
 per A2.
 
 ### A7. (MEDIUM) Rate-limit the public and crypto-heavy routes
@@ -415,7 +421,7 @@ so replays produce duplicate datapoints that skew trends. Add a unique constrain
 `(project_id, commit_sha, metric_name)` so re-ingesting the same commit's metric is a no-op rather
 than a duplicate.
 
-### A12. (DESIGN DECISION) The badge endpoint *is* public coverage data
+### A12. (DESIGN DECISION) The badge endpoint _is_ public coverage data
 
 Section 10 asserts "coverage data is private" while `/badge` is public. These are in tension: a badge
 is, by definition, the latest coverage number exposed publicly, and `/badge/:owner/:repo/:metric`

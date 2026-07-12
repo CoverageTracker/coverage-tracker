@@ -82,9 +82,8 @@ export async function report(
   // Non-default branch pushes are expected — the Worker only persists default-branch data.
   // Skip before the token mint to avoid a 422 that would fail the job.
   if (!isPR) {
-    const defaultBranch = (
-      github.context.payload as { repository?: { default_branch?: string } }
-    ).repository?.default_branch;
+    const defaultBranch = (github.context.payload as { repository?: { default_branch?: string } })
+      .repository?.default_branch;
     const currentBranch = process.env.GITHUB_REF_NAME ?? '';
     if (defaultBranch && currentBranch !== defaultBranch) {
       core.info(`Not on default branch (${currentBranch} ≠ ${defaultBranch}) — skipping ingest.`);
@@ -188,7 +187,9 @@ export async function runPRCheck(
         const data = (await res.json()) as BaselineResponse;
         baselines[m.name] = data.value;
       } catch {
-        core.warning(`Baseline fetch for "${m.name}" returned non-JSON body (HTTP ${res.status}) — skipping baseline.`);
+        core.warning(
+          `Baseline fetch for "${m.name}" returned non-JSON body (HTTP ${res.status}) — skipping baseline.`,
+        );
       }
     } else if (res.status !== 404) {
       core.warning(`Baseline fetch for "${m.name}" returned HTTP ${res.status}.`);
@@ -228,7 +229,13 @@ export async function runPRCheck(
     const failed = reasons.length > 0;
     if (failed) anyFailed = true;
 
-    const hasThreshold = thresholdConfigured(m.name, minCoverage, maxCoverageDrop, maxComplexity, maxDuplication);
+    const hasThreshold = thresholdConfigured(
+      m.name,
+      minCoverage,
+      maxCoverageDrop,
+      maxComplexity,
+      maxDuplication,
+    );
 
     results.push({
       metric: m.name,

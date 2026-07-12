@@ -47,7 +47,12 @@ function repos(count: number, prefix: string): FixtureRepo[] {
 /** installationId -> fixture data for /app/installations/:id and /installation/repositories */
 export const FIXTURE_INSTALLATIONS: Record<number, InstallationFixture> = {
   100: {
-    account: { id: 100, login: 'fixture-org', type: 'Organization', avatar_url: 'https://example.com/a.png' },
+    account: {
+      id: 100,
+      login: 'fixture-org',
+      type: 'Organization',
+      avatar_url: 'https://example.com/a.png',
+    },
     repos: [
       { id: 1001, name: 'repo-a', full_name: 'fixture-org/repo-a', default_branch: 'main' },
       { id: 1002, name: 'repo-b', full_name: 'fixture-org/repo-b', default_branch: 'develop' },
@@ -55,12 +60,22 @@ export const FIXTURE_INSTALLATIONS: Record<number, InstallationFixture> = {
   },
   // Pagination: 150 repos spans two pages of 100 + 50 at the hardcoded per_page=100.
   101: {
-    account: { id: 101, login: 'big-org', type: 'Organization', avatar_url: 'https://example.com/b.png' },
+    account: {
+      id: 101,
+      login: 'big-org',
+      type: 'Organization',
+      avatar_url: 'https://example.com/b.png',
+    },
     repos: repos(150, 'repo'),
   },
   // No repos left — exercises performResync's "remove local projects GitHub no longer has" path.
   102: {
-    account: { id: 102, login: 'empty-org', type: 'Organization', avatar_url: 'https://example.com/c.png' },
+    account: {
+      id: 102,
+      login: 'empty-org',
+      type: 'Organization',
+      avatar_url: 'https://example.com/c.png',
+    },
     repos: [],
   },
 };
@@ -79,7 +94,10 @@ function installationIdFromAuth(request: Request): number | null {
 }
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 /**
@@ -102,7 +120,10 @@ export async function githubOutboundService(request: Request, oidcJwk: JWK): Pro
   if (match && request.method === 'POST') {
     const id = Number(match[1]);
     if (id === FAILING_ACCESS_TOKEN_INSTALLATION_ID) return json({ message: 'Server error' }, 500);
-    return json({ token: `mock-token-${id}`, expires_at: new Date(Date.now() + 600_000).toISOString() });
+    return json({
+      token: `mock-token-${id}`,
+      expires_at: new Date(Date.now() + 600_000).toISOString(),
+    });
   }
 
   match = url.pathname.match(/^\/app\/installations\/(\d+)$/);

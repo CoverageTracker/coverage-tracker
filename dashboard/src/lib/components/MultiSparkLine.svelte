@@ -26,7 +26,10 @@
         width: container.clientWidth,
         height: 44,
         padding: [4, 0, 4, 0],
-        axes: [{ show: false, size: 0 }, { show: false, size: 0 }],
+        axes: [
+          { show: false, size: 0 },
+          { show: false, size: 0 },
+        ],
         scales: { x: { time: true } },
         legend: { show: false },
         cursor: { show: false },

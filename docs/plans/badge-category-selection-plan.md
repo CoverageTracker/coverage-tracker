@@ -67,6 +67,7 @@ category row carries all metric columns.
 ## Wiring: `dashboard/src/routes/[owner]/[repo]/+page.svelte`
 
 Pass the new prop at the existing `<BadgeModal ... />` call (lines 143–149):
+
 ```svelte
 <BadgeModal
   owner={data.project.owner_login}
@@ -81,6 +82,7 @@ Pass the new prop at the existing `<BadgeModal ... />` call (lines 143–149):
 ## Tests: `test/badge.test.ts`
 
 Extend the existing helpers and add cases:
+
 - Extend `seedCoverage()` to accept a `category` field (default `'default'`), inserting into
   the `category` column.
 - Extend `getBadge()` to accept an optional `category` and append it as a `?category=`

@@ -14,6 +14,7 @@ Service Token, and the end-user's GitHub OAuth auth would continue to protect th
 (handled by Access, not by the dashboard's code).
 
 Benefits over the current approach:
+
 - No JWT forwarding — the user's browser session token is never sent to the Worker
 - Works identically in local dev and production (just set the env vars)
 - Removes the `ENVIRONMENT` workaround and its associated risk
@@ -24,6 +25,7 @@ Benefits over the current approach:
 ### 1. Cloudflare Access: create a Service Token
 
 In the Cloudflare Zero Trust dashboard:
+
 - **Access → Service Auth → Service Tokens → Create Service Token**
 - Name: `coverage-tracker-dashboard`
 - Copy the generated `Client ID` and `Client Secret` (the secret is only shown once)
@@ -56,6 +58,7 @@ if (
 ```
 
 Add to `Bindings` in `src/types.ts`:
+
 ```typescript
 CF_ACCESS_CLIENT_ID?: string;
 CF_ACCESS_CLIENT_SECRET?: string;
@@ -92,6 +95,7 @@ pass them to `buildAuthHeaders`. Drop the `ENVIRONMENT` reads.
 ### 4. Dashboard: add Service Token env vars
 
 **File: `dashboard/.env.example`** — add:
+
 ```
 CF_ACCESS_CLIENT_ID=
 CF_ACCESS_CLIENT_SECRET=
@@ -103,6 +107,7 @@ In local dev (`.env` or `.dev.vars`), set both.
 ### 5. Remove the dev bypass
 
 Once Service Tokens are wired up, the `ENVIRONMENT` bypass is no longer needed:
+
 - Remove `ENVIRONMENT` check from `src/middleware/access.ts`
 - Remove `ENVIRONMENT` from `src/types.ts`
 - Remove `ENVIRONMENT` from both `.dev.vars.example` files
@@ -122,7 +127,7 @@ Once Service Tokens are wired up, the `ENVIRONMENT` bypass is no longer needed:
 
 - The Service Token secret is a Wrangler secret (not a `vars` entry) — it must never
   appear in source or `wrangler.json`.
-- If the Worker later exposes routes that need to identify *which user* is making the
+- If the Worker later exposes routes that need to identify _which user_ is making the
   request (e.g., per-user data isolation), the JWT forwarding path would need to be
   reinstated for those routes. This tool only tracks a single deployer's data, so
   service-level auth is sufficient.

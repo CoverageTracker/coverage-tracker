@@ -67,7 +67,9 @@ describe('POST /api/admin/resync', () => {
   });
 
   it('returns 502 when the resync fails', async () => {
-    const res = await postJson('/api/admin/resync', { installationId: FAILING_ACCESS_TOKEN_INSTALLATION_ID });
+    const res = await postJson('/api/admin/resync', {
+      installationId: FAILING_ACCESS_TOKEN_INSTALLATION_ID,
+    });
     expect(res.status).toBe(502);
   });
 
@@ -78,14 +80,18 @@ describe('POST /api/admin/resync', () => {
     const owner = await testEnv.DB.prepare('SELECT * FROM owners WHERE github_id = 100').first();
     expect(owner).not.toBeNull();
 
-    const repoA = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 1001').first<{
+    const repoA = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 1001',
+    ).first<{
       full_slug: string;
       default_branch: string;
     }>();
     expect(repoA?.full_slug).toBe('fixture-org/repo-a');
     expect(repoA?.default_branch).toBe('main');
 
-    const repoB = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 1002').first<{
+    const repoB = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 1002',
+    ).first<{
       default_branch: string;
     }>();
     expect(repoB?.default_branch).toBe('develop');
@@ -103,7 +109,9 @@ describe('POST /api/admin/resync', () => {
     const res = await postJson('/api/admin/resync', { installationId: 102 });
     expect(res.status).toBe(200);
 
-    const stale = await testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = 99999').first();
+    const stale = await testEnv.DB.prepare(
+      'SELECT * FROM projects WHERE github_repo_id = 99999',
+    ).first();
     expect(stale).toBeNull();
   });
 });
@@ -149,7 +157,7 @@ describe('PATCH /api/admin/projects/:id/badge', () => {
   it('toggles the badge and persists it', async () => {
     const res = await patchJson('/api/admin/projects/2/badge', { enabled: true });
     expect(res.status).toBe(200);
-    const body = await res.json() as { ok: boolean; badge_enabled: boolean };
+    const body = (await res.json()) as { ok: boolean; badge_enabled: boolean };
     expect(body.badge_enabled).toBe(true);
 
     const row = await testEnv.DB.prepare('SELECT badge_enabled FROM projects WHERE id = 2').first<{

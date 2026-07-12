@@ -25,9 +25,7 @@
 
   // Derive owner name for subtitle
   const ownerName = $derived(
-    data.projects.length > 0
-      ? data.projects[0].full_slug.split('/')[0]
-      : null,
+    data.projects.length > 0 ? data.projects[0].full_slug.split('/')[0] : null,
   );
 </script>
 
@@ -39,7 +37,12 @@
   <div class="page-header">
     <h1>Projects</h1>
     {#if data.projects.length > 0}
-      <p class="subtitle">{data.projects.length} {data.projects.length === 1 ? 'repository' : 'repositories'}{ownerName ? ` · ${ownerName}` : ''}</p>
+      <p class="subtitle">
+        {data.projects.length}
+        {data.projects.length === 1 ? 'repository' : 'repositories'}{ownerName
+          ? ` · ${ownerName}`
+          : ''}
+      </p>
     {/if}
   </div>
 
@@ -79,7 +82,11 @@
               </div>
               {#if browser && cat.data.length > 1}
                 {@const sd = sparklineData(cat.data)}
-                <SparkLine timestamps={sd.timestamps} values={sd.values} color={theme.tokens.chart[0]} />
+                <SparkLine
+                  timestamps={sd.timestamps}
+                  values={sd.values}
+                  color={theme.tokens.chart[0]}
+                />
               {/if}
             {:else}
               <div class="multi-metric">

@@ -68,7 +68,7 @@ describe('parseLizard', () => {
     expect(parseLizard(xml)).toEqual({ cyclomatic: 4 });
   });
 
-  it('uses the final cumulative average across a multi-file report, not the first file\'s', () => {
+  it("uses the final cumulative average across a multi-file report, not the first file's", () => {
     // Real lizard --xml output for a multi-file project writes a running
     // cumulative <average label="CCN"> after each file's items (all as flat
     // siblings, since the format has no per-file nesting) — only the last
@@ -100,6 +100,8 @@ describe('detectComplexityShape', () => {
     expect(parseComplexity('{"a.py":[{"type":"function","complexity":2}]}')).toEqual({
       cyclomatic: 2,
     });
-    expect(parseComplexity('2 pkg fn file.go:1:1\n4 pkg gn file.go:2:1')).toEqual({ cyclomatic: 3 });
+    expect(parseComplexity('2 pkg fn file.go:1:1\n4 pkg gn file.go:2:1')).toEqual({
+      cyclomatic: 3,
+    });
   });
 });

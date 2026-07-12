@@ -33,7 +33,7 @@ export async function performResync(installationId: number, env: Bindings): Prom
     throw new Error(`Failed to fetch installation: ${installationRes.status}`);
   }
 
-  const installation = await installationRes.json() as {
+  const installation = (await installationRes.json()) as {
     account: { id: number; login: string; type: 'User' | 'Organization'; avatar_url: string };
   };
 

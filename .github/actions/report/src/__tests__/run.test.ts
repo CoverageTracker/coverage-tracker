@@ -1,9 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as core from '@actions/core';
 import * as fs from 'fs';
-import { run, runIngest, runPRCheck, postCheckRun, type Metric, type ThresholdResult } from '../run.js';
+import {
+  run,
+  runIngest,
+  runPRCheck,
+  postCheckRun,
+  type Metric,
+  type ThresholdResult,
+} from '../run.js';
 // Pure helper tests still live here too
-import { parseThreshold, thresholdConfigured, formatValue, formatDelta, buildSummary } from '../run.js';
+import {
+  parseThreshold,
+  thresholdConfigured,
+  formatValue,
+  formatDelta,
+  buildSummary,
+} from '../run.js';
 
 // ── Hoisted mutable state for module mocks ────────────────────────────────────
 // vi.hoisted runs during the hoisting phase so these variables are available
@@ -101,8 +114,7 @@ describe('thresholdConfigured', () => {
 describe('formatValue', () => {
   it('formats a percentage to one decimal place', () =>
     expect(formatValue(82.4, '%')).toBe('82.4%'));
-  it('formats a score to two decimal places', () =>
-    expect(formatValue(4.2, 'score')).toBe('4.20'));
+  it('formats a score to two decimal places', () => expect(formatValue(4.2, 'score')).toBe('4.20'));
   it('formats 100% correctly', () => expect(formatValue(100, '%')).toBe('100.0%'));
   it('formats an integer score to two decimal places', () =>
     expect(formatValue(5, 'score')).toBe('5.00'));
@@ -122,14 +134,28 @@ describe('formatDelta', () => {
 
 describe('buildSummary', () => {
   const pass: ThresholdResult = {
-    metric: 'coverage', current: 85, baseline: 80, unit: '%', status: 'pass', reason: '',
+    metric: 'coverage',
+    current: 85,
+    baseline: 80,
+    unit: '%',
+    status: 'pass',
+    reason: '',
   };
   const fail: ThresholdResult = {
-    metric: 'complexity', current: 12, baseline: 8, unit: 'score', status: 'fail',
+    metric: 'complexity',
+    current: 12,
+    baseline: 8,
+    unit: 'score',
+    status: 'fail',
     reason: 'exceeds max-complexity of 10',
   };
   const info: ThresholdResult = {
-    metric: 'duplication', current: 2.5, baseline: null, unit: '%', status: 'info', reason: '',
+    metric: 'duplication',
+    current: 2.5,
+    baseline: null,
+    unit: '%',
+    status: 'info',
+    reason: '',
   };
 
   it('contains the markdown table header', () => {
@@ -159,7 +185,9 @@ describe('run()', () => {
   beforeEach(() => {
     vi.mocked(core.getIDToken).mockResolvedValue('mock-oidc-token');
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(METRICS_ONE as unknown as ReturnType<typeof fs.readFileSync>);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      METRICS_ONE as unknown as ReturnType<typeof fs.readFileSync>,
+    );
     mockPayload.repository = { default_branch: 'main' };
     mockChecksCreate.mockResolvedValue({});
     mockFetch.mockResolvedValue(okFetchResponse({ ok: true, inserted: 1 }));
@@ -195,11 +223,11 @@ describe('run()', () => {
   });
 
   it('warns and returns early when metrics array is empty', async () => {
-    vi.mocked(fs.readFileSync).mockReturnValue(METRICS_EMPTY as unknown as ReturnType<typeof fs.readFileSync>);
-    await run();
-    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
-      'No metrics collected — skipping report.',
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      METRICS_EMPTY as unknown as ReturnType<typeof fs.readFileSync>,
     );
+    await run();
+    expect(vi.mocked(core.warning)).toHaveBeenCalledWith('No metrics collected — skipping report.');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -260,9 +288,7 @@ describe('runIngest()', () => {
   it('calls core.setFailed on a non-OK HTTP response', async () => {
     mockFetch.mockResolvedValue(errFetchResponse(422, 'Unprocessable entity'));
     await runIngest('https://worker.example.com', 'mock-token', metrics);
-    expect(vi.mocked(core.setFailed)).toHaveBeenCalledWith(
-      expect.stringContaining('HTTP 422'),
-    );
+    expect(vi.mocked(core.setFailed)).toHaveBeenCalledWith(expect.stringContaining('HTTP 422'));
   });
 
   it('sends typed coverage fields (not a metrics array) in the request body', async () => {
@@ -353,18 +379,14 @@ describe('runPRCheck()', () => {
 
   it('fails when coverage drop exceeds max-coverage-drop', async () => {
     vi.stubEnv('MAX_COVERAGE_DROP', '3'); // baseline=80, current=75, drop=5 > 3
-    mockFetch.mockResolvedValue(
-      okFetchResponse({ value: 80, unit: '%', commit_sha: 'abc' }),
-    );
+    mockFetch.mockResolvedValue(okFetchResponse({ value: 80, unit: '%', commit_sha: 'abc' }));
     await runPRCheck(WORKER, TOKEN, coverageMetric, 'owner', 'repo');
     expect(vi.mocked(core.setFailed)).toHaveBeenCalled();
   });
 
   it('passes when coverage drop is within max-coverage-drop', async () => {
     vi.stubEnv('MAX_COVERAGE_DROP', '10'); // baseline=80, current=75, drop=5 <= 10
-    mockFetch.mockResolvedValue(
-      okFetchResponse({ value: 80, unit: '%', commit_sha: 'abc' }),
-    );
+    mockFetch.mockResolvedValue(okFetchResponse({ value: 80, unit: '%', commit_sha: 'abc' }));
     await runPRCheck(WORKER, TOKEN, coverageMetric, 'owner', 'repo');
     expect(vi.mocked(core.setFailed)).not.toHaveBeenCalled();
   });
@@ -372,14 +394,26 @@ describe('runPRCheck()', () => {
   it('fails when complexity exceeds max-complexity', async () => {
     vi.stubEnv('MAX_COMPLEXITY', '10'); // current=15 > 10
     mockFetch.mockResolvedValue(errFetchResponse(404));
-    await runPRCheck(WORKER, TOKEN, [{ name: 'complexity', value: 15, unit: 'score' }], 'owner', 'repo');
+    await runPRCheck(
+      WORKER,
+      TOKEN,
+      [{ name: 'complexity', value: 15, unit: 'score' }],
+      'owner',
+      'repo',
+    );
     expect(vi.mocked(core.setFailed)).toHaveBeenCalled();
   });
 
   it('fails when duplication exceeds max-duplication', async () => {
     vi.stubEnv('MAX_DUPLICATION', '5'); // current=8 > 5
     mockFetch.mockResolvedValue(errFetchResponse(404));
-    await runPRCheck(WORKER, TOKEN, [{ name: 'duplication', value: 8, unit: '%' }], 'owner', 'repo');
+    await runPRCheck(
+      WORKER,
+      TOKEN,
+      [{ name: 'duplication', value: 8, unit: '%' }],
+      'owner',
+      'repo',
+    );
     expect(vi.mocked(core.setFailed)).toHaveBeenCalled();
   });
 

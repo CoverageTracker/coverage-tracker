@@ -82,9 +82,7 @@ export async function main(): Promise<void> {
   }
   core.info(
     `Coverage (${format}) from ${coveragePath}: ${coverage.line_coverage}% lines` +
-      (coverage.branch_coverage !== undefined
-        ? `, ${coverage.branch_coverage}% branches`
-        : ''),
+      (coverage.branch_coverage !== undefined ? `, ${coverage.branch_coverage}% branches` : ''),
   );
 
   // ── 2. Resolve optional complexity + duplication reports ──────────────────

@@ -25,9 +25,21 @@ jobs:
       # ── 1. Unit-test the Action runner ──────────────────────────────────────
       # vitest --coverage emits coverage/lcov.info (the lcov reporter). The Action
       # dogfoods itself: its own real coverage becomes the reported artifact.
+      - name: Install Action dependencies
+        working-directory: .github/actions/report
+        run: npm ci
+
+      - name: Lint Action
+        working-directory: .github/actions/report
+        run: npm run lint
+
+      - name: Check Action formatting
+        working-directory: .github/actions/report
+        run: npm run format:check
+
       - name: Test Action runner
         working-directory: .github/actions/report
-        run: npm ci && npm test
+        run: npm test
 
       # ── 2. Stage the LCOV report at the zero-config probe path ──────────────
       # coverage/lcov.info (repo root) is probe #2, so the Action auto-detects it

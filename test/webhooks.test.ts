@@ -14,7 +14,11 @@ beforeEach(() => {
   testEnv.GITHUB_APP_PRIVATE_KEY = getTestAppPrivateKeyPem();
 });
 
-async function postWebhookEvent(event: string, payload: unknown, deliveryId: string): Promise<Response> {
+async function postWebhookEvent(
+  event: string,
+  payload: unknown,
+  deliveryId: string,
+): Promise<Response> {
   const body = JSON.stringify(payload);
   const signature = await signWebhookBody(testEnv.GITHUB_WEBHOOK_SECRET, body);
   return worker.fetch(
@@ -37,11 +41,13 @@ async function getOwnerByGithubId(githubId: number) {
 }
 
 async function getProjectByRepoId(githubRepoId: number) {
-  return testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = ?').bind(githubRepoId).first<{
-    full_slug: string;
-    default_branch: string;
-    installation_id: number;
-  }>();
+  return testEnv.DB.prepare('SELECT * FROM projects WHERE github_repo_id = ?')
+    .bind(githubRepoId)
+    .first<{
+      full_slug: string;
+      default_branch: string;
+      installation_id: number;
+    }>();
 }
 
 describe('POST /api/webhooks/github', () => {
@@ -52,7 +58,12 @@ describe('POST /api/webhooks/github', () => {
         action: 'created',
         installation: {
           id: 42,
-          account: { id: 555, login: 'neworg', type: 'Organization', avatar_url: 'https://example.com/x.png' },
+          account: {
+            id: 555,
+            login: 'neworg',
+            type: 'Organization',
+            avatar_url: 'https://example.com/x.png',
+          },
         },
         repositories: [
           { id: 7001, name: 'alpha', full_name: 'neworg/alpha' },
@@ -102,7 +113,12 @@ describe('POST /api/webhooks/github', () => {
         action: 'added',
         installation: {
           id: 43,
-          account: { id: 556, login: 'addorg', type: 'User', avatar_url: 'https://example.com/y.png' },
+          account: {
+            id: 556,
+            login: 'addorg',
+            type: 'User',
+            avatar_url: 'https://example.com/y.png',
+          },
         },
         repositories_added: [{ id: 7101, name: 'gamma', full_name: 'addorg/gamma' }],
       },
@@ -127,7 +143,10 @@ describe('POST /api/webhooks/github', () => {
       'installation_repositories',
       {
         action: 'removed',
-        installation: { id: 44, account: { id: 901, login: 'remorg', type: 'Organization', avatar_url: '' } },
+        installation: {
+          id: 44,
+          account: { id: 901, login: 'remorg', type: 'Organization', avatar_url: '' },
+        },
         repositories_removed: [{ id: 8001, name: 'leaving', full_name: 'remorg/leaving' }],
       },
       'd-repos-removed',
@@ -162,7 +181,7 @@ describe('POST /api/webhooks/github', () => {
   it('acknowledges an unrecognized event with 200 and no side effects', async () => {
     const res = await postWebhookEvent('ping', { zen: 'test' }, 'd-ping');
     expect(res.status).toBe(200);
-    const body = await res.json() as { ok: boolean };
+    const body = (await res.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
   });
 
@@ -186,7 +205,11 @@ describe('POST /api/webhooks/github', () => {
   });
 
   it('rejects a replayed delivery id with 409', async () => {
-    const payload = { action: 'created', installation: { id: 46, account: { id: 559, login: 'x', type: 'User', avatar_url: '' } }, repositories: [] };
+    const payload = {
+      action: 'created',
+      installation: { id: 46, account: { id: 559, login: 'x', type: 'User', avatar_url: '' } },
+      repositories: [],
+    };
     const first = await postWebhookEvent('installation', payload, 'd-replay-wh');
     expect(first.status).toBe(200);
 

@@ -114,31 +114,31 @@ This also removes the old "invoke `collect.sh` via `bash`" workaround.
 
 Coverage (in probe order — first hit wins):
 
-| Path | Produced by |
-|---|---|
-| `coverage.out` | `go tool cover` |
-| `coverage/lcov.info` | Istanbul/vitest/jest, SimpleCov, Dart/Flutter |
-| `lcov.info` | cargo-llvm-cov, hpc-codecov |
-| `coverage.lcov` | coverage.py, gcovr, perl2lcov |
-| `coverage.info` | coverlet |
-| `cover/lcov.info` | ExCoveralls |
-| `target/coverage/lcov.info` | Cloverage |
-| `target/site/jacoco/jacoco.xml` | JaCoCo (Maven) |
-| `build/reports/jacoco/test/jacocoTestReport.xml` | JaCoCo (Gradle) |
-| `coverage.xml` | PHPUnit (Cobertura) |
-| `luacov.report.out` | LuaCov lcov reporter |
+| Path                                             | Produced by                                   |
+| ------------------------------------------------ | --------------------------------------------- |
+| `coverage.out`                                   | `go tool cover`                               |
+| `coverage/lcov.info`                             | Istanbul/vitest/jest, SimpleCov, Dart/Flutter |
+| `lcov.info`                                      | cargo-llvm-cov, hpc-codecov                   |
+| `coverage.lcov`                                  | coverage.py, gcovr, perl2lcov                 |
+| `coverage.info`                                  | coverlet                                      |
+| `cover/lcov.info`                                | ExCoveralls                                   |
+| `target/coverage/lcov.info`                      | Cloverage                                     |
+| `target/site/jacoco/jacoco.xml`                  | JaCoCo (Maven)                                |
+| `build/reports/jacoco/test/jacocoTestReport.xml` | JaCoCo (Gradle)                               |
+| `coverage.xml`                                   | PHPUnit (Cobertura)                           |
+| `luacov.report.out`                              | LuaCov lcov reporter                          |
 
 (kcov and covertool default paths contain glob/dynamic segments — those
 consumers set `coverage-path` explicitly; document this.)
 
 Complexity and duplication:
 
-| Signal | Tool | Default path |
-|---|---|---|
-| Complexity | Radon | `radon.json` |
-| Complexity | gocyclo | `gocyclo.txt` |
-| Complexity | Lizard | `lizard-report.xml` |
-| Duplication | jscpd | `jscpd-report/jscpd-report.json` |
+| Signal      | Tool    | Default path                     |
+| ----------- | ------- | -------------------------------- |
+| Complexity  | Radon   | `radon.json`                     |
+| Complexity  | gocyclo | `gocyclo.txt`                    |
+| Complexity  | Lizard  | `lizard-report.xml`              |
+| Duplication | jscpd   | `jscpd-report/jscpd-report.json` |
 
 Document all of the above as the convention consumers write to for
 auto-detection.
@@ -196,6 +196,7 @@ module.
 
 ### Phase 5 — Markdown documentation
 
+<!-- prettier-ignore -->
 - [x] `docs/generating-coverage-reports.md` — **generated file, do not edit
       directly.** Canonical source is `generating-coverage-reports.svx` in
       the coveragetracker.dev repo (see Plan B, Phase 2a). Author these
@@ -268,7 +269,7 @@ markdown copy is generated from here (Phase 2a).
       Node toolchain): for each configured `.svx`, parse frontmatter, emit
       `# {title}` followed by the body verbatim, prefixed with an HTML
       comment header: `<!-- GENERATED from coveragetracker.dev
-      src/lib/docs-content/<file>.svx — do not edit here -->`
+src/lib/docs-content/<file>.svx — do not edit here -->`
       (extended: titled callouts are rewritten to GitHub-renderable alerts,
       `<!-- site-only -->` blocks are stripped, and multi-source targets
       compose several `.svx` into one doc — used for `docs/INSTALLATION.md`,
@@ -289,6 +290,8 @@ markdown copy is generated from here (Phase 2a).
       (`COVERAGE_TRACKER_SYNC_TOKEN`). Do **not** widen the product GitHub
       App's permissions for docs plumbing. **Manual step remaining: generate
       the PAT and save the secret** — workflow and docs are in place.
+
+<!-- prettier-ignore -->
 - [x] Update `README.md` in this repo with a "Docs export pipeline" section
       documenting the PAT setup so the sync can be re-provisioned (token
       expiry, new fork, new maintainer):

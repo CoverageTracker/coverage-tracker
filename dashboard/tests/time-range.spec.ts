@@ -48,11 +48,19 @@ test.describe('project detail page — time range selector', () => {
     }
   });
 
-  test('clicking a range button selects it, updates the URL, and refetches with that range', async ({ page }) => {
+  test('clicking a range button selects it, updates the URL, and refetches with that range', async ({
+    page,
+  }) => {
     await page.getByRole('tab', { name: '30d', exact: true }).click();
 
-    await expect(page.getByRole('tab', { name: '30d', exact: true })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('tab', { name: '7d', exact: true })).toHaveAttribute('aria-selected', 'false');
+    await expect(page.getByRole('tab', { name: '30d', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('tab', { name: '7d', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
     expect(new URL(page.url()).searchParams.get('range')).toBe('30d');
 
     const last = requestedUrls.at(-1);
@@ -69,7 +77,10 @@ test.describe('project detail page — time range selector', () => {
 
   test('selecting a range does not change the active metric tab', async ({ page }) => {
     await page.getByRole('tab', { name: '1d', exact: true }).click();
-    await expect(page.getByRole('tab', { name: 'Coverage', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Coverage', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 });
 
@@ -84,12 +95,18 @@ test.describe('project detail page — range URL param handling', () => {
   test('a valid range in the URL pre-selects the matching button', async ({ page }) => {
     await page.goto('/testorg/repo?range=12h');
     await page.waitForSelector('[role="tablist"]');
-    await expect(page.getByRole('tab', { name: '12h', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: '12h', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   test('an unknown range in the URL falls back to the 7d default', async ({ page }) => {
     await page.goto('/testorg/repo?range=3weeks');
     await page.waitForSelector('[role="tablist"]');
-    await expect(page.getByRole('tab', { name: '7d', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: '7d', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 });

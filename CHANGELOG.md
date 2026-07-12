@@ -51,7 +51,7 @@ always wins). See `docs/generating-coverage-reports.md`.
 
 - **(a) The Action no longer runs your tests or coverage tools.** It previously
   detected the language and ran `go tool cover`, `coverage.py`, Istanbul, etc.
-  Now you must produce the coverage report yourself *before* the Action step.
+  Now you must produce the coverage report yourself _before_ the Action step.
   The `coverage-report-go` / `coverage-report-python` / `coverage-report-js`
   inputs are removed; use `coverage-path` (or rely on auto-detection).
 - **(b) jscpd is no longer auto-installed.** Duplication silently disappears for
@@ -78,13 +78,13 @@ always wins). See `docs/generating-coverage-reports.md`.
 
 ```yaml
 # You run the tools; the Action reads the report (auto-detected).
-- run: npm test -- --coverage        # writes coverage/lcov.info
-- run: npx jscpd . --reporters json --output ./jscpd-report   # only if you want duplication
+- run: npm test -- --coverage # writes coverage/lcov.info
+- run: npx jscpd . --reporters json --output ./jscpd-report # only if you want duplication
 - uses: CoverageTracker/coverage-tracker/.github/actions/report@v0.2.0
   with:
     worker-url: https://coverage-tracker.example.com
     # coverage-path is auto-detected; complexity/duplication are optional
-    max-duplication: '5'                                        # now requires a jscpd report
+    max-duplication: '5' # now requires a jscpd report
 ```
 
 ### Added

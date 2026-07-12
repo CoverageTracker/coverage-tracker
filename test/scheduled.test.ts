@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { env, createExecutionContext, waitOnExecutionContext, createScheduledController } from 'cloudflare:test';
+import {
+  env,
+  createExecutionContext,
+  waitOnExecutionContext,
+  createScheduledController,
+} from 'cloudflare:test';
 import worker from '../src/index';
 import type { Bindings } from '../src/types';
 
@@ -27,7 +32,9 @@ describe('scheduled() cron entry point', () => {
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
        VALUES (1, 'sha-old', 'main', ?1, 82.0),
               (1, 'sha-new', 'main', ?2, 91.0)`,
-    ).bind(old, now).run();
+    )
+      .bind(old, now)
+      .run();
 
     const ctx = createExecutionContext();
     const controller = createScheduledController();
@@ -38,7 +45,9 @@ describe('scheduled() cron entry point', () => {
     // without this, D1 assertions below would race that unawaited promise.
     await waitOnExecutionContext(ctx);
 
-    const remaining = await testEnv.DB.prepare('SELECT commit_sha FROM coverage_runs').all<{ commit_sha: string }>();
+    const remaining = await testEnv.DB.prepare('SELECT commit_sha FROM coverage_runs').all<{
+      commit_sha: string;
+    }>();
     expect(remaining.results.map((r) => r.commit_sha)).toEqual(['sha-new']);
 
     const daily = await testEnv.DB.prepare(

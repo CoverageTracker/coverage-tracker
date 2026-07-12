@@ -34,7 +34,7 @@ jobs:
 
       - uses: aboutcode-org/scancode-action@76777db8400d719de67ba3e465c5881037b45cb9 # main, 2026-07-10
         with:
-          pipelines: "scan_codebase"
-          output-formats: "json spdx cyclonedx"
+          pipelines: 'scan_codebase'
+          output-formats: 'json spdx cyclonedx'
           check-compliance: true
-          compliance-fail-level: "ERROR"
+          compliance-fail-level: 'ERROR'

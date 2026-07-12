@@ -30,7 +30,9 @@ describe('rollupAndPrune', () => {
        VALUES (1, 'sha-old1', 'main', ?1, 80.0),
               (1, 'sha-old2', 'main', ?2, 85.0),
               (1, 'sha-new',  'main', ?3, 90.0)`,
-    ).bind(old - 86400, old, now).run();
+    )
+      .bind(old - 86400, old, now)
+      .run();
 
     await rollupAndPrune(testEnv);
 
@@ -51,7 +53,9 @@ describe('rollupAndPrune', () => {
     await testEnv.DB.prepare(
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, ran_at, line_coverage)
        VALUES (1, 'sha-idem', 'main', ?1, 75.0)`,
-    ).bind(old).run();
+    )
+      .bind(old)
+      .run();
 
     await rollupAndPrune(testEnv);
     await rollupAndPrune(testEnv); // second call with empty runs — no-op
@@ -68,7 +72,9 @@ describe('rollupAndPrune', () => {
       `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage)
        VALUES (1, 'sha-be', 'main', 'backend', ?1, 80.0),
               (1, 'sha-fe', 'main', 'frontend', ?1, 40.0)`,
-    ).bind(old).run();
+    )
+      .bind(old)
+      .run();
 
     await rollupAndPrune(testEnv);
 

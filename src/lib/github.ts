@@ -29,25 +29,22 @@ export async function getInstallationToken(
 ): Promise<InstallationToken> {
   const appJwt = await mintAppJwt(appId, privateKeyPem);
 
-  const res = await fetch(
-    `${GITHUB_API}/app/installations/${installationId}/access_tokens`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${appJwt}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': USER_AGENT,
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
+  const res = await fetch(`${GITHUB_API}/app/installations/${installationId}/access_tokens`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${appJwt}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': USER_AGENT,
+      'X-GitHub-Api-Version': '2022-11-28',
     },
-  );
+  });
 
   if (!res.ok) {
     console.error(`Failed to mint installation token: ${res.status}`, await res.text());
     throw new Error('Failed to mint installation token');
   }
 
-  const data = await res.json() as { token: string; expires_at: string };
+  const data = (await res.json()) as { token: string; expires_at: string };
   return { token: data.token, expiresAt: data.expires_at };
 }
 
@@ -69,30 +66,25 @@ export interface GitHubInstallation {
 }
 
 /** Fetch all repos for an installation (handles pagination). */
-export async function fetchInstallationRepos(
-  installationToken: string,
-): Promise<GitHubRepo[]> {
+export async function fetchInstallationRepos(installationToken: string): Promise<GitHubRepo[]> {
   const repos: GitHubRepo[] = [];
   let page = 1;
 
   while (true) {
-    const res = await fetch(
-      `${GITHUB_API}/installation/repositories?per_page=100&page=${page}`,
-      {
-        headers: {
-          Authorization: `Bearer ${installationToken}`,
-          Accept: 'application/vnd.github+json',
-          'User-Agent': USER_AGENT,
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
+    const res = await fetch(`${GITHUB_API}/installation/repositories?per_page=100&page=${page}`, {
+      headers: {
+        Authorization: `Bearer ${installationToken}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': USER_AGENT,
+        'X-GitHub-Api-Version': '2022-11-28',
       },
-    );
+    });
 
     if (!res.ok) {
       throw new Error(`Failed to fetch installation repos: ${res.status}`);
     }
 
-    const data = await res.json() as { repositories: GitHubRepo[]; total_count: number };
+    const data = (await res.json()) as { repositories: GitHubRepo[]; total_count: number };
     repos.push(...data.repositories);
 
     if (repos.length >= data.total_count) break;

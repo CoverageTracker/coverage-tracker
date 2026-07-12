@@ -119,9 +119,7 @@
       }
 
       if (e.key === 'Tab') {
-        const focusable = Array.from(
-          modalEl.querySelectorAll<HTMLElement>(focusableSelector),
-        );
+        const focusable = Array.from(modalEl.querySelectorAll<HTMLElement>(focusableSelector));
         if (focusable.length === 0) return;
 
         const firstEl = focusable[0];
@@ -204,11 +202,7 @@
       {#if !localBadgeEnabled}
         <div class="badge-notice">
           <span>Public badge serving is disabled — the badge won't load until enabled.</span>
-          <button
-            class="enable-btn"
-            onclick={() => toggleBadge(true)}
-            disabled={toggling}
-          >
+          <button class="enable-btn" onclick={() => toggleBadge(true)} disabled={toggling}>
             {toggling ? 'Enabling…' : 'Enable public badge'}
           </button>
         </div>
@@ -228,21 +222,13 @@
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <span>Public badge enabled</span>
-          <button
-            class="disable-link"
-            onclick={() => toggleBadge(false)}
-            disabled={toggling}
-          >
+          <button class="disable-link" onclick={() => toggleBadge(false)} disabled={toggling}>
             {toggling ? 'Disabling…' : 'Disable'}
           </button>
         </div>
       {/if}
 
-      {#each [
-        { key: 'url', label: 'Shields.io URL', value: shieldsUrl },
-        { key: 'md', label: 'Markdown', value: markdownSnippet },
-        { key: 'rst', label: 'reStructuredText', value: rstSnippet },
-      ] as snippet (snippet.key)}
+      {#each [{ key: 'url', label: 'Shields.io URL', value: shieldsUrl }, { key: 'md', label: 'Markdown', value: markdownSnippet }, { key: 'rst', label: 'reStructuredText', value: rstSnippet }] as snippet (snippet.key)}
         <div class="snippet-group">
           <label class="snippet-label" for="snippet-{snippet.key}">
             {snippet.label}

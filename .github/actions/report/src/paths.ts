@@ -49,7 +49,10 @@ function probe(probes: string[], exists: Exists): string | null {
  * Resolve the coverage report path. Always required.
  * @throws if an explicit path is missing, or if probing finds nothing.
  */
-export function resolveCoveragePath(input: string | undefined, exists: Exists = defaultExists): string {
+export function resolveCoveragePath(
+  input: string | undefined,
+  exists: Exists = defaultExists,
+): string {
   const trimmed = input?.trim();
   if (trimmed) {
     if (!exists(trimmed)) {

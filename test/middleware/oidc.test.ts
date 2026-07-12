@@ -45,7 +45,8 @@ describe('verifyOidcToken', () => {
   });
 
   it('rejects a non-RS256 token before any JWKS lookup', async () => {
-    const toBase64Url = (s: string) => btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const toBase64Url = (s: string) =>
+      btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
     const fakeJwt = [
       toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
       toBase64Url(JSON.stringify({ sub: 'test' })),

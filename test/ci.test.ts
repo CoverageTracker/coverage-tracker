@@ -48,7 +48,7 @@ describe('POST /api/ci/coverage', () => {
     const token = await signOidcJwt({ ref_type: 'tag', ref: 'refs/tags/v1.0.0' });
     const res = await fetchCI({ line_coverage: 90 }, token);
     expect(res.status).toBe(422);
-    const body = await res.json() as { error: string };
+    const body = (await res.json()) as { error: string };
     expect(body.error).toMatch(/branch refs/);
   });
 
@@ -62,7 +62,7 @@ describe('POST /api/ci/coverage', () => {
     const token = await signOidcJwt({ ref: 'refs/heads/feature-x' });
     const res = await fetchCI({ line_coverage: 90 }, token);
     expect(res.status).toBe(422);
-    const body = await res.json() as { error: string };
+    const body = (await res.json()) as { error: string };
     expect(body.error).toMatch(/default branch/);
   });
 
@@ -76,7 +76,7 @@ describe('POST /api/ci/coverage', () => {
     const token = await signOidcJwt({});
     const res = await fetchCI({ line_coverage: 150 }, token); // out of 0-100 range
     expect(res.status).toBe(422);
-    const body = await res.json() as { error: string; issues: unknown[] };
+    const body = (await res.json()) as { error: string; issues: unknown[] };
     expect(body.error).toBe('Validation failed');
     expect(Array.isArray(body.issues)).toBe(true);
     expect(body.issues.length).toBeGreaterThan(0);
@@ -90,10 +90,7 @@ describe('POST /api/ci/coverage', () => {
 
   it('accepts a valid report and persists it with 202', async () => {
     const token = await signOidcJwt({ sha: 'c'.repeat(40) });
-    const res = await fetchCI(
-      { line_coverage: 92.5, branch_coverage: 80, cyclomatic: 4 },
-      token,
-    );
+    const res = await fetchCI({ line_coverage: 92.5, branch_coverage: 80, cyclomatic: 4 }, token);
     expect(res.status).toBe(202);
 
     const row = await getLatestCoverageRun(testEnv.DB, 1, 'main');

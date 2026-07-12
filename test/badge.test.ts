@@ -29,12 +29,14 @@ async function getBadge(
   return worker.fetch(new Request(url), testEnv as never);
 }
 
-async function seedCoverage(fields: Partial<{
-  line_coverage: number;
-  duplication_pct: number;
-  cyclomatic: number;
-  category: string;
-}>): Promise<void> {
+async function seedCoverage(
+  fields: Partial<{
+    line_coverage: number;
+    duplication_pct: number;
+    cyclomatic: number;
+    category: string;
+  }>,
+): Promise<void> {
   const category = fields.category ?? 'default';
   await testEnv.DB.prepare(
     `INSERT INTO coverage_runs (project_id, commit_sha, branch, category, ran_at, line_coverage, duplication_pct, cyclomatic)
@@ -79,7 +81,12 @@ describe('GET /api/badge/:owner/:repo/:metric.json', () => {
     await seedCoverage({ line_coverage: 87.25 });
     const res = await getBadge('testorg', 'repo', 'coverage');
     expect(res.status).toBe(200);
-    const body = await res.json() as { schemaVersion: number; label: string; message: string; color: string };
+    const body = (await res.json()) as {
+      schemaVersion: number;
+      label: string;
+      message: string;
+      color: string;
+    };
     expect(body.schemaVersion).toBe(1);
     expect(body.label).toBe('coverage');
     expect(body.message).toBe('87.3%');
@@ -93,7 +100,7 @@ describe('GET /api/badge/:owner/:repo/:metric.json', () => {
   ])('coverage badge color at %d%% is %s', async (value, color) => {
     await seedCoverage({ line_coverage: value });
     const res = await getBadge('testorg', 'repo', 'coverage');
-    const body = await res.json() as { color: string };
+    const body = (await res.json()) as { color: string };
     expect(body.color).toBe(color);
   });
 
@@ -104,14 +111,14 @@ describe('GET /api/badge/:owner/:repo/:metric.json', () => {
   ])('duplication badge color at %d%% is %s', async (value, color) => {
     await seedCoverage({ line_coverage: 50, duplication_pct: value });
     const res = await getBadge('testorg', 'repo', 'duplication');
-    const body = await res.json() as { color: string };
+    const body = (await res.json()) as { color: string };
     expect(body.color).toBe(color);
   });
 
   it('defaults to blue for metrics with no color thresholds', async () => {
     await seedCoverage({ line_coverage: 50, cyclomatic: 12 });
     const res = await getBadge('testorg', 'repo', 'cyclomatic');
-    const body = await res.json() as { color: string; message: string };
+    const body = (await res.json()) as { color: string; message: string };
     expect(body.color).toBe('blue');
     expect(body.message).toBe('12'); // unitless metric, no % suffix
   });
@@ -121,28 +128,28 @@ describe('GET /api/badge/:owner/:repo/:metric.json', () => {
     await seedCoverage({ line_coverage: 82.5, category: 'backend' });
     const res = await getBadge('testorg', 'repo', 'coverage', 'backend');
     expect(res.status).toBe(200);
-    const body = await res.json() as { message: string };
+    const body = (await res.json()) as { message: string };
     expect(body.message).toBe('82.5%');
   });
 
   it('labels the badge with the category name when non-default', async () => {
     await seedCoverage({ line_coverage: 82.5, category: 'backend' });
     const res = await getBadge('testorg', 'repo', 'coverage', 'backend');
-    const body = await res.json() as { label: string };
+    const body = (await res.json()) as { label: string };
     expect(body.label).toBe('backend coverage');
   });
 
   it('keeps the plain metric name as the label when category is omitted', async () => {
     await seedCoverage({ line_coverage: 90 });
     const res = await getBadge('testorg', 'repo', 'coverage');
-    const body = await res.json() as { label: string };
+    const body = (await res.json()) as { label: string };
     expect(body.label).toBe('coverage');
   });
 
   it('keeps the plain metric name as the label when category is explicitly default', async () => {
     await seedCoverage({ line_coverage: 90 });
     const res = await getBadge('testorg', 'repo', 'coverage', 'default');
-    const body = await res.json() as { label: string };
+    const body = (await res.json()) as { label: string };
     expect(body.label).toBe('coverage');
   });
 
@@ -157,7 +164,7 @@ describe('GET /api/badge/:owner/:repo/:metric.json', () => {
     await seedCoverage({ line_coverage: 50, cyclomatic: 20, category: 'backend' });
     const defaultRes = await getBadge('testorg', 'repo', 'cyclomatic');
     const backendRes = await getBadge('testorg', 'repo', 'cyclomatic', 'backend');
-    expect((await defaultRes.json() as { message: string }).message).toBe('5');
-    expect((await backendRes.json() as { message: string }).message).toBe('20');
+    expect(((await defaultRes.json()) as { message: string }).message).toBe('5');
+    expect(((await backendRes.json()) as { message: string }).message).toBe('20');
   });
 });

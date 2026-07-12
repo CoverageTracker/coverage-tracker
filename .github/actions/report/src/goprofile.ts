@@ -34,8 +34,7 @@ export function parseGoProfile(content: string): CoverageResult {
     if (count > 0) coveredStatements += numStatements;
   }
 
-  const lineCoverage =
-    totalStatements > 0 ? round((coveredStatements / totalStatements) * 100) : 0;
+  const lineCoverage = totalStatements > 0 ? round((coveredStatements / totalStatements) * 100) : 0;
 
   return { line_coverage: lineCoverage };
 }
