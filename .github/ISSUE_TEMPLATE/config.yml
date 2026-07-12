@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Installation and setup help
+    url: https://github.com/CoverageTracker/coverage-tracker/blob/main/docs/INSTALLATION.md
+    about: Questions about deploying or configuring your own instance should start here, not as a bug report.

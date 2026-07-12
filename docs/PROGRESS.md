@@ -154,7 +154,7 @@ Self-test workflow created. Uses `min-coverage: '20'`; actual coverage is 98.09%
 - [x] **Push to main** — OIDC token mints, `/ingest` accepts it, 2 metrics ingested (`coverage: 98.09%`, `duplication: 0.00%`)
 - [x] **Push to feature branch** — Action exits cleanly with "Not on default branch (test/matrix-threshold-and-branch ≠ main) — skipping ingest." info log; job green, no 422, no metric written
 - [x] **PR from same repo** — baselines fetched, Check Run posted on PR head SHA with summary table; pass (`min-coverage: '20'`) and fail (`min-coverage: '99'`) cases both verified via PR #2
-- [ ] **Fork PR** (if applicable) — OIDC mint fails gracefully (warning, not failure); Check Run post skipped gracefully
+- [x] **Fork PR** — verified manually: OIDC mint fails gracefully (warning, not failure); Check Run post skipped gracefully
 - [x] **jscpd** — auto-installs on fresh runner; `Duplication: 0.00% (no clones detected)` collected; appears in Check Run summary table
 - [x] **Threshold breach** — `min-coverage: '99'` with coverage at 98.09%; action fails with "One or more coverage thresholds were not met.", Check Run posted with `conclusion: failure`
 
@@ -218,21 +218,21 @@ reads the file." See `docs/plans/consumer-generated-reports-migration-plan-v3.md
 
 ---
 
-## Phase 7 — "Deploy to Cloudflare" button 🔶 In progress
+## Phase 7 — "Deploy to Cloudflare" button ✅ Complete
 
 - [x] `deploy` npm script runs `wrangler d1 migrations apply DB --remote` before `wrangler deploy` — uses binding name (`DB`) not database name so the deploy flow works when users specify a different database name
 - [x] `wrangler.json` committed without `database_id` — Cloudflare's deploy flow provisions D1 automatically and fills in the ID
 - [x] Button added to `README.md`
-- [ ] Validate end-to-end via the deploy button flow (fork the repo, click button, confirm D1 is provisioned and migrations apply)
+- [x] Validated end-to-end via the deploy button flow (fork the repo, click button, confirmed D1 provisioned and migrations applied)
 
 ---
 
-## Phase 8 — Docs, OSS hygiene, public release 🔶 In progress
+## Phase 8 — Docs, OSS hygiene, public release ✅ Complete
 
 - [x] `docs/INSTALLATION.md` — full setup guide, updated for converged architecture
 - [x] Repository public at `github.com/CoverageTracker/coverage-tracker`
 - [x] `wrangler.example.jsonc` and `.dev.vars.example` committed as templates (updated for convergence)
 - [x] `README.md` — root-level project overview, quick-start, badge examples (updated for convergence)
-- [ ] `CONTRIBUTING.md`
-- [ ] GitHub issue templates
-- [ ] Pre-commit secret scan (gitleaks) in CI (A9)
+- [x] `CONTRIBUTING.md`
+- [x] GitHub issue templates
+- [x] Secret scanning provided by GitGuardian, per maintainer (supersedes the gitleaks CI step originally planned for A9)
