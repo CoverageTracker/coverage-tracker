@@ -253,12 +253,12 @@ npm run deploy
 
 See [docs/PROGRESS.md](docs/PROGRESS.md) for a full breakdown. Current state:
 
-| Phase | Description                                          | Status      |
-| ----- | ---------------------------------------------------- | ----------- |
-| 1–6   | Core Worker, webhooks, dashboard, reporting Action   | Complete    |
-| —     | Convergence refactor (single Worker + static assets) | Complete    |
-| 7     | "Deploy to Cloudflare" button                        | In progress |
-| 8     | Docs, OSS hygiene, public release                    | In progress |
+| Phase | Description                                          | Status   |
+| ----- | ---------------------------------------------------- | -------- |
+| 1–6   | Core Worker, webhooks, dashboard, reporting Action   | Complete |
+| —     | Convergence refactor (single Worker + static assets) | Complete |
+| 7     | "Deploy to Cloudflare" button                        | Complete |
+| 8     | Docs, OSS hygiene, public release                    | Complete |
 
 ---
 
