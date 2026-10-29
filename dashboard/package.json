@@ -17,7 +17,7 @@
     "test:e2e:coverage": "cross-env VITE_COVERAGE=true playwright test && nyc report --temp-dir=.nyc_output --report-dir=coverage --reporter=lcov"
   },
   "dependencies": {
-    "@sveltejs/kit": "^2.70.2",
+    "@sveltejs/kit": "^3.1.0",
     "svelte": "^5.56.4",
     "uplot": "^1.6.32"
   },
@@ -25,7 +25,7 @@
     "@axe-core/playwright": "^4.11.3",
     "@eslint/js": "^9.0.0",
     "@playwright/test": "^1.49.1",
-    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/adapter-static": "^4.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@types/node": "^26.0.0",
     "cross-env": "^10.1.0",
